@@ -23,7 +23,7 @@ class HTMLRelatedLinksProvider {
     var docText = document.getText();
 
     var docDir = path.dirname(document.uri.fsPath);
-    var linkRE = new RegExp("<(?:a|img|link|script)[^>]*? (?:src|href)=[\'\"]((?!javascript:|https|http|\\/).*?)[\'\"][^>]*>", "gmi");
+    var linkRE = new RegExp("<(?:a|img|link|script)[^>]*? (?:src|href)=[\'\"]((?!\\/\\/|[^:>\'\"]*:)[^#?>\'\"]*)(?:[^>\'\"]*)[\'\"][^>]*>", "gmi");
     var links = new Set();
     var result;
     while ((result = linkRE.exec(docText)) != null) {
