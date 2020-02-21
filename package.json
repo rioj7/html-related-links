@@ -1,0 +1,35 @@
+{
+  "name": "html-related-links",
+  "displayName": "HTML Related Links",
+  "description": "View of related and linked files in HTML file",
+  "publisher": "rioj7",
+  "license": "MIT",
+  "version": "0.1.0",
+  "engines": {"vscode": "^1.37.0"},
+  "categories": ["Other"],
+  "keywords": ["html","related","links"],
+  "icon": "images/icon.png",
+  "galleryBanner": {"color": "#000080", "theme": "dark"},
+  "activationEvents": [
+    "onView:htmlRelatedLinks"
+  ],
+  "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "id": "htmlRelatedLinks",
+          "name": "HTML Related Links"
+        }
+      ]
+    }
+  },
+  "main": "./extension.js",
+  "homepage": "https://github.com/rioj7/html-related-links",
+  "bugs": {
+    "url": "https://github.com/rioj7/html-related-links/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rioj7/html-related-links.git"
+  }
+}
