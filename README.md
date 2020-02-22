@@ -82,15 +82,17 @@ You want to exclude all files where the file name contains `bar`.
 
 Add the following regular expression in the Settings UI:
 
-* `[\\/](?=[^\\/]+$).*bar`
+* `([\\/])(?=[^\\/]+$).*bar`
 
 In `settings.json` it will look like
 
 ```
   "html-related-links.exclude": [
-    "[\\\\/](?=[^\\\\/]+$).*bar"
+    "([\\\\/])(?=[^\\\\/]+$).*bar"
   ]
 ```
+
+(The first capture group `()` is needed here because VSC tries to find Markdown URLs (`[]` followed by `()`) inside code. It can be removed if you enter it in the configuration option.)
 
 We look for the last directory separator. Find a directory separator that is followed by a string that does not contain a directory separator. And then for a string that has `bar` anywhere in it.
 

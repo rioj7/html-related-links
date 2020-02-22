@@ -4,7 +4,7 @@
   "description": "View of related and linked files in HTML file",
   "publisher": "rioj7",
   "license": "MIT",
-  "version": "0.2.0",
+  "version": "0.2.3",
   "engines": {"vscode": "^1.37.0"},
   "categories": ["Other"],
   "keywords": ["html","related","links"],
