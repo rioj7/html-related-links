@@ -19,17 +19,26 @@ class HTMLRelatedLinksProvider {
   }
   getChildren(element) {
     if (!this.editor) return Promise.resolve([]);
+    var config = vscode.workspace.getConfiguration('html-related-links', null);
+    var include = config.get('include').slice();  // we need a copy
+    var exclude = config.get('exclude');
     var document = this.editor.document;
     var docText = document.getText();
 
     var docDir = path.dirname(document.uri.fsPath);
-    var linkRE = new RegExp("<(?:a|img|link|script)[^>]*? (?:src|href)=[\'\"]((?!\\/\\/|[^:>\'\"]*:)[^#?>\'\"]*)(?:[^>\'\"]*)[\'\"][^>]*>", "gmi");
+    include.push("<(?:a|img|link|script)[^>]*? (?:src|href)=[\'\"]((?!\\/\\/|[^:>\'\"]*:)[^#?>\'\"]*)(?:[^>\'\"]*)[\'\"][^>]*>")
     var links = new Set();
-    var result;
-    while ((result = linkRE.exec(docText)) != null) {
-      links.add(path.join(docDir, result[1]));
+    for (const re of include) {
+      var linkRE = new RegExp(re, "gmi");
+      var result;
+      while ((result = linkRE.exec(docText)) != null) {
+        if (result.length < 2) continue; // no matching group defined
+        links.add(path.join(docDir, result[1]));
+      }
     }
-    return Promise.resolve(Array.from(links).sort().map(x => new RelatedLink(vscode.Uri.file(x))));
+    var excludeRE = exclude.map(re => new RegExp(re, "mi"));
+    var linksAr = Array.from(links).filter(x => !excludeRE.some(r => x.match(r) != null));
+    return Promise.resolve(linksAr.sort().map(x => new RelatedLink(vscode.Uri.file(x))));
   }
 }
 class RelatedLink extends vscode.TreeItem {
