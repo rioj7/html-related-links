@@ -126,7 +126,7 @@ and you have opened `/home/myname/WebProjects` as a folder or part of a Multi Ro
 
 ```
   "html-related-links.fileroot": [
-    "siteFoo"
+    "siteFoo",
     "siteBar"
   ]
 ```
