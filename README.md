@@ -96,6 +96,45 @@ In `settings.json` it will look like
 
 We look for the last directory separator. Find a directory separator that is followed by a string that does not contain a directory separator. And then for a string that has `bar` anywhere in it.
 
+## `html-related-links.fileroot`
+
+Is an array of strings that are the relative root directories of the websites in the workspace folder.
+
+These strings are joined with the workspace folder to get the full website root folders.
+
+The website root folder is used for files that have a path that starts with `/` (not `//` for external link with same protocol). Used for linking style, script, .... files.
+
+Which folder is choosen as the website root folder:
+
+* If no workspace is open the current file folder is used
+* If this setting is empty the workspace folder is used.
+* If a join of workspace folder and an element of `fileroot` is the start of the current file path that join is used
+
+If you have the following directory structure
+
+```
+/home/myname/WebProjects
+             ├── .vscode
+             │   └── settings.json
+             ├── siteFoo
+             │   └── <site files>
+             └── siteBar
+                 └── <site files>
+```
+
+and you have opened `/home/myname/WebProjects` as a folder or part of a Multi Root Workspace you add this setting to the file `/home/myname/WebProjects/.vscode/settings.json`:
+
+```
+  "html-related-links.fileroot": [
+    "siteFoo"
+    "siteBar"
+  ]
+```
+
+You can use the Settings GUI to modify this setting for any folder of the (MR) Workspace.
+
+This setting does not make sence to use in the global user setting.
+
 ## TODO
 * handle absolute paths (what is the root of the website?)
 * handle multi root workspace

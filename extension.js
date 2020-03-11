@@ -19,21 +19,34 @@ class HTMLRelatedLinksProvider {
   }
   getChildren(element) {
     if (!this.editor) return Promise.resolve([]);
-    var config = vscode.workspace.getConfiguration('html-related-links', null);
+    var document = this.editor.document;
+    let workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
+    var config = vscode.workspace.getConfiguration('html-related-links', workspaceFolder ? workspaceFolder.uri : null);
     var include = config.get('include').slice();  // we need a copy
     var exclude = config.get('exclude');
-    var document = this.editor.document;
-    var docText = document.getText();
+    var fileroot = config.get('fileroot');
 
-    var docDir = path.dirname(document.uri.fsPath);
+    var docFolder = path.dirname(document.uri.fsPath);
+    var filerootFolder = docFolder;
+    if (workspaceFolder) {
+      filerootFolder = workspaceFolder.uri.fsPath;
+      for (const root of fileroot) {
+        let possibleRoot = path.join(filerootFolder, root);
+        if (docFolder.startsWith(possibleRoot)) {
+          filerootFolder = possibleRoot;
+          break;
+        }
+      }
+    }
     include.push("<(?:a|img|link|script)[^>]*? (?:src|href)=[\'\"]((?!\\/\\/|[^:>\'\"]*:)[^#?>\'\"]*)(?:[^>\'\"]*)[\'\"][^>]*>")
+    var docText = document.getText();
     var links = new Set();
     for (const re of include) {
       var linkRE = new RegExp(re, "gmi");
       var result;
       while ((result = linkRE.exec(docText)) != null) {
         if (result.length < 2) continue; // no matching group defined
-        links.add(path.join(docDir, result[1]));
+        links.add(path.join(result[1].startsWith('/') ? filerootFolder : docFolder, result[1]));
       }
     }
     var excludeRE = exclude.map(re => new RegExp(re, "mi"));
