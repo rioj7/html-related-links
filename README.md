@@ -116,17 +116,18 @@ If you have the following directory structure
 /home/myname/WebProjects
              ├── .vscode
              │   └── settings.json
-             ├── siteFoo
-             │   └── <site files>
+             ├── work
+             │   └── siteFoo
+             │       └── <website files>
              └── siteBar
-                 └── <site files>
+                 └── <website files>
 ```
 
 and you have opened `/home/myname/WebProjects` as a folder or part of a Multi Root Workspace you add this setting to the file `/home/myname/WebProjects/.vscode/settings.json`:
 
 ```
   "html-related-links.fileroot": [
-    "siteFoo",
+    "work/siteFoo",
     "siteBar"
   ]
 ```
@@ -136,6 +137,4 @@ You can use the Settings GUI to modify this setting for any folder of the (MR) W
 This setting does not make sence to use in the global user setting.
 
 ## TODO
-* handle absolute paths (what is the root of the website?)
-* handle multi root workspace
 * add the possibility to create a file that does not exist

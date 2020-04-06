@@ -26,7 +26,8 @@ class HTMLRelatedLinksProvider {
     var exclude = config.get('exclude');
     var fileroot = config.get('fileroot');
 
-    var docFolder = path.dirname(document.uri.fsPath);
+    var ownfilePath = document.uri.fsPath;
+    var docFolder = path.dirname(ownfilePath);
     var filerootFolder = docFolder;
     if (workspaceFolder) {
       filerootFolder = workspaceFolder.uri.fsPath;
@@ -46,7 +47,10 @@ class HTMLRelatedLinksProvider {
       var result;
       while ((result = linkRE.exec(docText)) != null) {
         if (result.length < 2) continue; // no matching group defined
-        links.add(path.join(result[1].startsWith('/') ? filerootFolder : docFolder, result[1]));
+        if (result[1].length === 0) { continue; }
+        var linkPath = path.join(result[1].startsWith('/') ? filerootFolder : docFolder, result[1]);
+        if (linkPath === ownfilePath) { continue; }
+        links.add(linkPath);
       }
     }
     var excludeRE = exclude.map(re => new RegExp(re, "mi"));
