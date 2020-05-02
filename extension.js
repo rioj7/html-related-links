@@ -85,10 +85,13 @@ function activate(context) {
   vscode.window.onDidChangeTextEditorSelection(
     (changeEvent) => { htmlRelatedLinksProvider.setEditor(changeEvent.textEditor); },
     null, context.subscriptions);
+  const setContext_fileIsHTML = () => { vscode.commands.executeCommand('setContext', 'htmlRelatedLinks:fileIsHTML', vscode.window.activeTextEditor.document.languageId == 'html'); };
   vscode.window.onDidChangeActiveTextEditor(
-      () => { htmlRelatedLinksProvider.setEditor(vscode.window.activeTextEditor); },
+      () => { htmlRelatedLinksProvider.setEditor(vscode.window.activeTextEditor);
+        setContext_fileIsHTML(); },
       null, context.subscriptions);
   htmlRelatedLinksProvider.setEditor(vscode.window.activeTextEditor);
+  setContext_fileIsHTML();
 };
 
 function deactivate() {}
