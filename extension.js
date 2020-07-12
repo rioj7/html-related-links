@@ -47,8 +47,10 @@ class HTMLRelatedLinksProvider {
       var result;
       while ((result = linkRE.exec(docText)) != null) {
         if (result.length < 2) continue; // no matching group defined
-        if (result[1].length === 0) { continue; }
-        var linkPath = path.join(result[1].startsWith('/') ? filerootFolder : docFolder, result[1]);
+        let r1 = result[1];
+        if (r1==='/') r1 = '/__root__';
+        if (r1.length === 0) { continue; }
+        var linkPath = path.join(r1.startsWith('/') ? filerootFolder : docFolder, r1);
         if (linkPath === ownfilePath) { continue; }
         links.add(linkPath);
       }
