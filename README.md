@@ -1,6 +1,6 @@
 # HTML Related Links
 
-Add a View of related and linked files of an HTML file to the Explorer container.
+Add a View of related and linked files of the current file to the Explorer container.
 
 ![HTML Related Links View](images/html-related-links.png)
 
@@ -8,39 +8,83 @@ The files will be sorted based on there full path.
 
 If you click on an entry in the view that file will be opened. If the file does not exist nothing happens.
 
-The tags handled are: `a`, `img`, `link`, `script`.
+The tags handled for HTML files are: `a`, `img`, `link`, `script`.
 
 ## Configuration
 
 You can add regular expressions to find more related files or exclude files found.
 
-The configuration options can be found in the `Extenstions` | `HTML Related Links` section of the Settings UI.
+The configuration options can be found in the `Extensions` | `HTML Related Links` section of the Settings UI.
 
-They are arrays of strings that can be modified in the Settings UI and in the `settings.json` file. Be aware of the additional escaping needed if you edit `settings.json`.
+If the configuration option is an arrays of strings it can be modified in the Settings UI and in the `settings.json` file.
 
 Because the `settings.json` files for the User, Workspace and folder are merged you might need to set certain configuration options to the empty array in certain `settings.json` files.
 
+Be aware of the additional escaping needed if you edit `settings.json`.
+
 ## `html-related-links.include`
 
-Is an array of strings that are regular expressions that are used to **find related files in the HTML text**. The first capturing group is used as the related file.
+Because `html-related-links.include` can be an array or an object it can only be modified in `settings.json`.
 
-### Example
+The extension defines a find for HTML tags with links and adds this to the list with languageId `html`. In a previous version it was applied to any file. I don't think there is a use for it in non HTML files.
 
-You want to find files referenced in PHP `require` statements. You add the following 2 regular expressions in the Settings UI:
+### `include` is an array
 
-* `require\('([^']+)'\);`
-* `require '([^']+)';`
+If it is an array the elements are strings that are regular expressions that are used to **find related files in any file**. The first capturing group is used as the related file. These strings are added to the list of strings for the special languageId: `all` (see next paragraph).
 
-In `settings.json` it will look like
+### `include` is an object
+
+If it is an object you group the array of regular expressions to use by [languageId of the file](https://code.visualstudio.com/docs/languages/overview#_language-id). You can use any known VSC languageId and the special languageId `all`. 
+
+The `all` list of regex strings is mainly used to emulate the behaviour when this configuration option was only an array of strings. The `all` list is used for any file.
+
+The elements of the array are objects with 1 or 2 properties (or strings, see next paragraph):
+* `find` : a regex string with capture groups. property is required
+* `filePath` : a string that constructs the file path using the captured groups from `find`.
+    * it is a string as you would use in a regex replace operation, use `$1`, `$2`, ... to reference captured groups.
+    * the default value is: `"$1"`
+    * if the file path is relative to the file root directory you must start the `filePath` string with `/`.<br/>Example: if the `find` captures a relative to the file root Javascript file without extension use: `"/$1.js"`
+
+If you use the default value for `filePath` you can replace the object by the `find` property string. The following 3 elements are equivalent:
+```
+{ "find": "require\\('([^']+)'\\);", "filePath": "$1" },
+{ "find": "require\\('([^']+)'\\);" },
+"require\\('([^']+)'\\);"
+```
+
+### Example 1
+
+You want to find files referenced in PHP `require` statements. You add the following 2 regular expressions in `settings.json` :
 
 ```
-  "html-related-links.include": [
-    "require\\('([^']+)'\\);",
-    "require '([^']+)';"
-  ]
+  "html-related-links.include": {
+    "php": [
+      "require\\('([^']+)'\\);",
+      "require '([^']+)';"
+    ]
+  }
 ```
 
 At the moment it is not possible to limit the search to particular parts of the file. So if you write pages about PHP and use the `require` in your examples these files will also be matched. For HTML links in examples this does not apply because the `<` is written as `&lt;`, so it will not be matched as a HTML tag. It can lead to a match in Javascript files that construct HTML text.
+
+### Example 2
+
+If you also have a number of JavaScript files that use `import` statements and some of the file paths are relative paths you can add this to your `settings.json` :
+
+```
+  "html-related-links.include": {
+    "php": [
+      "require\\('([^']+)'\\);",
+      "require '([^']+)';"
+    ],
+    "javascript": [
+      { "find": "import [^ ]+ from '((?=src/).+?)';", "filePath": "/$1.js" },
+      { "find": "import [^ ]+ from '((?!src/).+?)';", "filePath": "$1.js" }
+    ]
+  }
+```
+
+The first `javascript` find is for files in the `src` directory relative to the [file root](#html-related-links.fileroot). The second find is for files relative to the current file.
 
 ## `html-related-links.exclude`
 
@@ -104,11 +148,11 @@ These strings are joined with the workspace folder to get the full website root 
 
 The website root folder is used for files that have a path that starts with `/` (not `//` for external link with same protocol). Used for linking style, script, .... files.
 
-Which folder is choosen as the website root folder:
+Which folder is choosen as the website root folder is done with the following steps:
 
-* If no workspace is open the current file folder is used
-* If this setting is empty the workspace folder is used.
-* If a join of workspace folder and an element of `fileroot` is the start of the current file path that join is used
+1. rootfolder = current file folder
+1. If there is a workspace folder: rootfolder = workspace folder
+1. If a join of the workspace folder and an element of `fileroot` is the start of the current file path: rootfolder =  this join
 
 If you have the following directory structure
 
@@ -135,6 +179,13 @@ and you have opened `/home/myname/WebProjects` as a folder or part of a Multi Ro
 You can use the Settings GUI to modify this setting for any folder of the (MR) Workspace.
 
 This setting does not make sence to use in the global user setting.
+
+## `html-related-links.alwaysShow`
+
+This boolean is used to determine if the HTML Related Links view is visible if the languageId of the file is not HTML. Default value is `false`. This means that the view is only visible when the current file has the languageId `'html'`.
+If you use the extension for other languageIds set the value to `true`.
+
+If you use a Multi Root Workspace you have to change it in the User settings or the Workspace setting. If defined in a Folder it does not work (VSC v1.44.2)
 
 ## TODO
 * add the possibility to create a file that does not exist

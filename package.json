@@ -4,7 +4,7 @@
   "description": "View of related and linked files in HTML file",
   "publisher": "rioj7",
   "license": "MIT",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "engines": {"vscode": "^1.40.0"},
   "categories": ["Other"],
   "keywords": ["html","related","links","multi-root ready"],
@@ -27,11 +27,38 @@
       "title": "HTML Related Links",
       "properties": {
         "html-related-links.include": {
-          "type": "array",
+          "type": ["array", "object"],
           "default": [],
           "scope": "resource",
-          "description": "Which other links to include (regexs, first capturing group is used)",
-          "items": { "type": "string" }
+          "description": "Which other links to include (regexs)",
+          "items": {
+            "type": "string",
+            "description": "Find the text containing a linked file (regex). First captured group is used"
+          },
+          "patternProperties": {
+            "^.+$": {
+              "type": "array",
+              "default": [],
+              "description": "Which other links to include for this languageId (array of: strings or find/filePath object)",
+              "items": {
+                "type": ["string", "object"],
+                "description": "If string, first capturing group is used",
+                "properties": {
+                  "find": {
+                    "type": "string",
+                    "description": "Find the text containing a linked file (regex)"
+                  },
+                  "filePath": {
+                    "type": "string",
+                    "description": "Modify the linked file path found, use any capture group from 'find' regex. Use \"/\" as first character to signal that file path is relative to a fileroot path",
+                    "default": "$1"
+                  }
+                },
+                "required": ["find"],
+                "additionalProperties": false
+              }
+            }
+          }
         },
         "html-related-links.exclude": {
           "type": "array",
