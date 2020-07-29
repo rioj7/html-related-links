@@ -4,7 +4,7 @@
   "description": "View of related and linked files in HTML file",
   "publisher": "rioj7",
   "license": "MIT",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "engines": {"vscode": "^1.40.0"},
   "categories": ["Other"],
   "keywords": ["html","related","links","multi-root ready"],
@@ -52,6 +52,14 @@
                     "type": "string",
                     "description": "Modify the linked file path found, use any capture group from 'find' regex. Use \"/\" as first character to signal that file path is relative to a fileroot path",
                     "default": "$1"
+                  },
+                  "lineNr": {
+                    "type": "string",
+                    "description": "To which line number do you want to jump. No default"
+                  },
+                  "charPos": {
+                    "type": "string",
+                    "description": "To which character position do you want to jump. Only used when `lineNr` is defined. No default"
                   }
                 },
                 "required": ["find"],

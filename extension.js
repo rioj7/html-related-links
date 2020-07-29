@@ -61,7 +61,7 @@ class HTMLRelatedLinksProvider {
       this.updateInclude(document.languageId, ["<(?:a|img|link|script)[^>]*? (?:src|href)=[\'\"]((?!\\/\\/|[^:>\'\"]*:)[^#?>\'\"]*)(?:[^>\'\"]*)[\'\"][^>]*>"]);
     }
     var docText = document.getText();
-    var links = new Set();
+    var links = new Map();
     for (const languageId in this.include) {
       if (!this.include.hasOwnProperty(languageId)) { continue; }
       // if (!(document.languageId === languageId || languageId === 'all')) { continue; }
@@ -76,13 +76,35 @@ class HTMLRelatedLinksProvider {
           if (r1.length === 0) { continue; }
           let linkPath = path.join(r1.startsWith('/') ? filerootFolder : docFolder, r1);
           if (linkPath === ownfilePath) { continue; }
-          links.add(linkPath);
+          let lineNr = undefined;
+          let charPos = undefined;
+          let label = undefined;
+          let compareStr = linkPath;
+          if (includeObj.lineNr) {
+            label = `${r1}`;
+            compareStr = label;
+            let addNumber = x => {
+              if (!x) return x;
+              x = result[0].replace(replaceRE, x);
+              label += `:${x}`;
+              x = Number(x);
+              compareStr += `:${String(x).padStart(7, '0')}`;
+              return x;
+            };
+            lineNr = addNumber(includeObj.lineNr);
+            charPos = addNumber(includeObj.charPos);
+          }
+          let key = label || linkPath;
+          if (!links.has(key)) {
+            links.set(key, {linkPath, lineNr, charPos, label, compareStr});
+          }
         }
       }
     }
     var excludeRE = exclude.map(re => new RegExp(re, "mi"));
-    var linksAr = Array.from(links).filter(x => !excludeRE.some(r => x.match(r) != null));
-    return Promise.resolve(linksAr.sort().map(x => new RelatedLink(vscode.Uri.file(x))));
+    var linksAr = Array.from(links.values()).filter(x => !excludeRE.some(r => x.linkPath.match(r) != null));
+    let collator = Intl.Collator().compare;
+    return Promise.resolve(linksAr.sort( (a,b) => collator(a.compareStr, b.compareStr) ).map(x => new RelatedLink(x)));
   }
   updateInclude(languageId, list) {
     if (!isArray(list)) { return; }
@@ -92,23 +114,26 @@ class HTMLRelatedLinksProvider {
     let includeLanguageArr = this.include[languageId];
     for (const listItem of list) {
       if (isString(listItem)) {
-        includeLanguageArr.push( {find: listItem, filePath: '$1'});
+        includeLanguageArr.push( {find: listItem, filePath: '$1', lineNr: undefined, charPos: undefined});
         continue;
       }
       let find = getProperty(listItem, 'find');
       let filePath = getProperty(listItem, 'filePath', '$1');
+      let lineNr = getProperty(listItem, 'lineNr');
+      let charPos = getProperty(listItem, 'charPos');
       if (isString(find)) {
-        includeLanguageArr.push( {find, filePath} );
+        includeLanguageArr.push( {find, filePath, lineNr, charPos} );
       }
     }
   }
 }
 class RelatedLink extends vscode.TreeItem {
-  constructor(uri) {
-    super(uri);
-    this.command = { command: "htmlRelatedLinks.openFile", arguments: [this.resourceUri], title: '' };
+  constructor(linkObj) {
+    super(vscode.Uri.file(linkObj.linkPath));
+    this.command = { command: "htmlRelatedLinks.openFile", arguments: [this.resourceUri, linkObj.lineNr, linkObj.charPos], title: '' };
     this.iconPath = false; // use theme icon
     this.description = true; // use recourse URI
+    this.label = linkObj.label; // use label when set
     // this.contextValue = 'link'; // used for menu entries
   }
   get tooltip() {
@@ -117,16 +142,22 @@ class RelatedLink extends vscode.TreeItem {
 }
 
 function activate(context) {
-  const openFile = (uri) => {
-    vscode.workspace.openTextDocument(uri).then((document) => {
-        vscode.window.showTextDocument(document, vscode.ViewColumn.Active, false);
+  const openFile = (uri, lineNr, charPos) => {
+    vscode.workspace.openTextDocument(uri).then(document => {
+        vscode.window.showTextDocument(document, vscode.ViewColumn.Active, false).then( editor => {
+          if (!lineNr) return;
+          charPos = charPos || 1;
+          let position = new vscode.Position(lineNr-1, charPos-1);
+          editor.selections = [new vscode.Selection(position, position)];
+          editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+        });
       },
-      (error) => { vscode.window.showErrorMessage(error); }
+      error => { vscode.window.showErrorMessage(error); }
     );
   }
   const htmlRelatedLinksProvider = new HTMLRelatedLinksProvider();
   vscode.window.registerTreeDataProvider('htmlRelatedLinks', htmlRelatedLinksProvider);
-  context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.openFile', (uri) => { openFile(uri); }) );
+  context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.openFile', (uri, lineNr, charPos) => { openFile(uri, lineNr, charPos); }) );
   vscode.window.onDidChangeTextEditorSelection(
     (changeEvent) => { htmlRelatedLinksProvider.setEditor(changeEvent.textEditor); },
     null, context.subscriptions);
