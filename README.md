@@ -10,6 +10,10 @@ If you click on an entry in the view that file will be opened. If the file does 
 
 The tags handled for HTML files are: `a`, `img`, `link`, `script`.
 
+## Lock view to a file
+
+Sometimes you want to fix the view to the content of a particular file. You can do this with the **`Lock to file`** button ![lock](images/unlock.png) in the title bar of the view.
+
 ## Configuration
 
 You can add regular expressions to find more related files or exclude files found.
@@ -191,4 +195,3 @@ If you use a Multi Root Workspace you have to change it in the User settings or 
 
 ## TODO
 * add the possibility to create a file that does not exist
-* lock content to a single file

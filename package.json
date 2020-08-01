@@ -4,7 +4,7 @@
   "description": "View of related and linked files in HTML file",
   "publisher": "rioj7",
   "license": "MIT",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "engines": {"vscode": "^1.40.0"},
   "categories": ["Other"],
   "keywords": ["html","related","links","multi-root ready"],
@@ -14,12 +14,40 @@
     "onView:htmlRelatedLinks", "onLanguage:html"
   ],
   "contributes": {
+    "commands": [
+      {
+        "command": "htmlRelatedLinks.fileLock",
+        "title": "Lock to file",
+        "category": "Related Links",
+        "icon": "$(unlock)"
+      },
+      {
+        "command": "htmlRelatedLinks.fileUnlock",
+        "title": "Unlock file",
+        "category": "Related Links",
+        "icon": "$(lock)"
+      }
+    ],
     "views": {
       "explorer": [
         {
           "id": "htmlRelatedLinks",
           "name": "HTML Related Links",
           "when": "htmlRelatedLinks:fileIsHTML || config.html-related-links.alwaysShow"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "htmlRelatedLinks.fileLock",
+          "when": "view == htmlRelatedLinks && !htmlRelatedLinks:fileIsLocked",
+          "group": "navigation"
+        },
+        {
+          "command": "htmlRelatedLinks.fileUnlock",
+          "when": "view == htmlRelatedLinks && htmlRelatedLinks:fileIsLocked",
+          "group": "navigation"
         }
       ]
     },

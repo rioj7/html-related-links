@@ -12,19 +12,43 @@ class HTMLRelatedLinksProvider {
     this._onDidChangeTreeData = new vscode.EventEmitter();
     this.onDidChangeTreeData = this._onDidChangeTreeData.event;
     this.include = {};
+    this.lockEditorPath = undefined;
+    this.content = undefined;
   }
   refresh() {
     this._onDidChangeTreeData.fire(0);
   }
-  setEditor(editor) {
+  setEditor(editor, reason) {
     this.editor = editor;
-    this.refresh();
+    if (this.needsRefresh()) { this.refresh(); }
+  }
+  isFileHTML() {
+    return this.editor && this.editor.document.languageId === 'html';
+  }
+  isLocked() {
+    return !!this.lockEditorPath;
+  }
+  isLockedEditor() {
+    return this.editor.document.uri.fsPath === this.lockEditorPath;
+  }
+  needsRefresh() {
+    if (this.isLocked()) { return this.isLockedEditor(); }
+    return true;
+  }
+  setLockEditor(editor) {
+    this.lockEditorPath = editor ? editor.document.uri.fsPath : undefined;
+    if (this.editor) this.setEditor(this.editor, 'Lock');  // refresh if needed
   }
   getTreeItem(element) {
     return element;
   }
   getChildren(element) {
     if (!this.editor) return Promise.resolve([]);
+    // when tabs are chanegd we get multiple 'ChangeTextEditorSelection' events.
+    // check for current editor
+    if (this.isLocked() && !this.isLockedEditor()) {
+      return Promise.resolve( this.content || [] );
+    }
     var document = this.editor.document;
     var workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
     var config = vscode.workspace.getConfiguration('html-related-links', workspaceFolder ? workspaceFolder.uri : null);
@@ -104,7 +128,8 @@ class HTMLRelatedLinksProvider {
     var excludeRE = exclude.map(re => new RegExp(re, "mi"));
     var linksAr = Array.from(links.values()).filter(x => !excludeRE.some(r => x.linkPath.match(r) != null));
     let collator = Intl.Collator().compare;
-    return Promise.resolve(linksAr.sort( (a,b) => collator(a.compareStr, b.compareStr) ).map(x => new RelatedLink(x)));
+    this.content = linksAr.sort( (a,b) => collator(a.compareStr, b.compareStr) ).map(x => new RelatedLink(x));
+    return Promise.resolve(this.content);
   }
   updateInclude(languageId, list) {
     if (!isArray(list)) { return; }
@@ -155,20 +180,21 @@ function activate(context) {
       error => { vscode.window.showErrorMessage(error); }
     );
   }
+  const setLockEditor = (editor) => {
+    htmlRelatedLinksProvider.setLockEditor(editor);
+    vscode.commands.executeCommand('setContext', 'htmlRelatedLinks:fileIsLocked', htmlRelatedLinksProvider.isLocked());
+  };
   const htmlRelatedLinksProvider = new HTMLRelatedLinksProvider();
   vscode.window.registerTreeDataProvider('htmlRelatedLinks', htmlRelatedLinksProvider);
   context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.openFile', (uri, lineNr, charPos) => { openFile(uri, lineNr, charPos); }) );
+  context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.fileLock', () => { setLockEditor(vscode.window.activeTextEditor); }) );
+  context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.fileUnlock', () => { setLockEditor(undefined); }) );
   vscode.window.onDidChangeTextEditorSelection(
-    (changeEvent) => { htmlRelatedLinksProvider.setEditor(changeEvent.textEditor); },
+    (changeEvent) => { htmlRelatedLinksProvider.setEditor(changeEvent.textEditor, 'Changed'); },
     null, context.subscriptions);
-  const setContext_fileIsHTML = () => {
-    let fileIsHTML = false;
-    if (vscode.window.activeTextEditor) { fileIsHTML = vscode.window.activeTextEditor.document.languageId === 'html'; }
-    vscode.commands.executeCommand('setContext', 'htmlRelatedLinks:fileIsHTML', fileIsHTML);
-  };
   const onChangeActiveTextEditor = () => {
-    htmlRelatedLinksProvider.setEditor(vscode.window.activeTextEditor);
-    setContext_fileIsHTML();
+    htmlRelatedLinksProvider.setEditor(vscode.window.activeTextEditor, 'Active');
+    vscode.commands.executeCommand('setContext', 'htmlRelatedLinks:fileIsHTML', htmlRelatedLinksProvider.isFileHTML());
   };
   vscode.window.onDidChangeActiveTextEditor(onChangeActiveTextEditor, null, context.subscriptions);
   onChangeActiveTextEditor();
