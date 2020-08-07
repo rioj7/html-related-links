@@ -55,6 +55,7 @@ class HTMLRelatedLinksProvider {
     var includeConfig = config.get('include');
     var exclude = config.get('exclude');
     var fileroot = config.get('fileroot');
+    var sortByPosition = config.get('sortByPosition');
 
     var ownfilePath = document.uri.fsPath;
     var docFolder = path.dirname(ownfilePath);
@@ -119,8 +120,9 @@ class HTMLRelatedLinksProvider {
             charPos = addNumber(includeObj.charPos);
           }
           let key = label || linkPath;
-          if (!links.has(key)) {
-            links.set(key, {linkPath, lineNr, charPos, label, compareStr});
+          let filePos = result.index;
+          if (!links.has(key) || (filePos < links.get(key).filePos)) {
+            links.set(key, {linkPath, lineNr, charPos, label, compareStr, filePos});
           }
         }
       }
@@ -128,7 +130,8 @@ class HTMLRelatedLinksProvider {
     var excludeRE = exclude.map(re => new RegExp(re, "mi"));
     var linksAr = Array.from(links.values()).filter(x => !excludeRE.some(r => x.linkPath.match(r) != null));
     let collator = Intl.Collator().compare;
-    this.content = linksAr.sort( (a,b) => collator(a.compareStr, b.compareStr) ).map(x => new RelatedLink(x));
+    let compareFunc = sortByPosition ? (a,b) => a.filePos - b.filePos : (a,b) => collator(a.compareStr, b.compareStr);
+    this.content = linksAr.sort( compareFunc ).map(x => new RelatedLink(x));
     return Promise.resolve(this.content);
   }
   updateInclude(languageId, list) {

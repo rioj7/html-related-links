@@ -4,7 +4,7 @@
   "description": "View of related and linked files in HTML file",
   "publisher": "rioj7",
   "license": "MIT",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "engines": {"vscode": "^1.40.0"},
   "categories": ["Other"],
   "keywords": ["html","related","links","multi-root ready"],
@@ -115,6 +115,12 @@
           "default": false,
           "scope": "resource",
           "description": "show \"HTML Related Links\" view when file language is not HTML"
+        },
+        "html-related-links.sortByPosition": {
+          "type": "boolean",
+          "default": false,
+          "scope": "resource",
+          "description": "sort the links in the view by position in the file"
         }
       }
     }

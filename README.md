@@ -193,5 +193,9 @@ If you use the extension for other languageIds set the value to `true`.
 
 If you use a Multi Root Workspace you have to change it in the User settings or the Workspace setting. If defined in a Folder it does not work (VSC v1.44.2)
 
+## `html-related-links.sortByPosition`
+
+Default the links in the view are sorted by the file path. If enabled the links are in the order found in the file. If a link is found multiple times the first position is used.
+
 ## TODO
 * add the possibility to create a file that does not exist
