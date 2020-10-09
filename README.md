@@ -48,7 +48,7 @@ The elements of the array are objects with 1 or 2 properties (or strings, see ne
     * it is a string as you would use in a regex replace operation, use `$1`, `$2`, ... to reference captured groups.
     * the default value is: `"$1"`
     * if the file path is relative to the file root directory you must start the `filePath` string with `/`.<br/>Example: if the `find` captures a relative to the file root Javascript file without extension use: `"/$1.js"`
-* `lineNr` : a string that constructs the line number to jump to using the captured groups from `find`.<br/>Example: `"find": "([\w.]+)@(\d+)", "lineNr": "$2"`
+* `lineNr` : a string that constructs the line number to jump to using the captured groups from `find`.<br/>Example: `"find": "([\\w.]+)@(\\d+)", "lineNr": "$2"`
 * `charPos` : a string that constructs the character position to jump to using the captured groups from `find`. Only used when `lineNr` is defined.
 
 If you use the default value for `filePath` you can replace the object by the `find` property string. The following 3 elements are equivalent:
