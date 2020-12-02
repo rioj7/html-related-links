@@ -14,6 +14,7 @@ class HTMLRelatedLinksProvider {
     this.include = {};
     this.lockEditorPath = undefined;
     this.content = undefined;
+    this.enableLogging = undefined;
   }
   refresh() {
     this._onDidChangeTreeData.fire(0);
@@ -52,6 +53,7 @@ class HTMLRelatedLinksProvider {
     var document = this.editor.document;
     var workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
     var config = vscode.workspace.getConfiguration('html-related-links', workspaceFolder ? workspaceFolder.uri : null);
+    this.enableLogging = config.get('enableLogging');
     var includeConfig = config.get('include');
     var exclude = config.get('exclude');
     var fileroot = config.get('fileroot');
@@ -171,7 +173,7 @@ class RelatedLink extends vscode.TreeItem {
     super(vscode.Uri.file(linkObj.linkPath));
     this.command = { command: "htmlRelatedLinks.openFile", arguments: [this.resourceUri, linkObj.lineNr, linkObj.charPos], title: '' };
     this.iconPath = false; // use theme icon
-    this.description = true; // use recourse URI
+    this.description = true; // use resource URI
     this.label = linkObj.label; // use label when set
     // this.contextValue = 'link'; // used for menu entries
   }
@@ -182,8 +184,14 @@ class RelatedLink extends vscode.TreeItem {
 
 function activate(context) {
   const openFile = (uri, lineNr, charPos) => {
+    if (htmlRelatedLinksProvider.enableLogging) {
+      console.log('Clicked on:', uri.fsPath);
+      console.log(`    goto: ${lineNr}:${charPos||1}`);
+    }
     vscode.workspace.openTextDocument(uri).then(document => {
+        if (htmlRelatedLinksProvider.enableLogging) { console.log('Document opened:', uri.fsPath); }
         vscode.window.showTextDocument(document, vscode.ViewColumn.Active, false).then( editor => {
+          if (htmlRelatedLinksProvider.enableLogging) { console.log('Editor opened:', uri.fsPath); }
           if (!lineNr) return;
           charPos = charPos || 1;
           let position = new vscode.Position(lineNr-1, charPos-1);

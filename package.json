@@ -4,7 +4,7 @@
   "description": "View of related and linked files in HTML file",
   "publisher": "rioj7",
   "license": "MIT",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "engines": {"vscode": "^1.40.0"},
   "categories": ["Other"],
   "keywords": ["html","related","links","multi-root ready"],
@@ -131,6 +131,12 @@
           "default": false,
           "scope": "resource",
           "description": "Remove the file path from the label. Path shown twice if lineNr's or absolute paths."
+        },
+        "html-related-links.enableLogging": {
+          "type": "boolean",
+          "default": false,
+          "scope": "resource",
+          "description": "Show a few log statements when clicked on a row. Used for debugging."
         }
       }
     }

@@ -202,5 +202,9 @@ Default the links in the view are sorted by the file path. If enabled the links 
 
 For links with lineNr's and absolute links the path is shown twice. Set this option to `true` to remove the path from the label of the row.
 
+## `html-related-links.enableLogging`
+
+If nothing happens when you click on a row you can enable a few logging statements to see which stage of the document loading succeeds.
+
 ## TODO
 * add the possibility to create a file that does not exist
