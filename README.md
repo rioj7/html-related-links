@@ -42,12 +42,13 @@ If it is an object you group the array of regular expressions to use by [languag
 
 The `all` list of regex strings is mainly used to emulate the behaviour when this configuration option was only an array of strings. The `all` list is used for any file.
 
-The elements of the array are objects with 1 or 2 properties (or strings, see next paragraph):
+The elements of the array are objects with properties (or strings, see next paragraph):
 * `find` : a regex string with capture groups. property is required
 * `filePath` : a string that constructs the file path using the captured groups from `find`.
     * it is a string as you would use in a regex replace operation, use `$1`, `$2`, ... to reference captured groups.
     * the default value is: `"$1"`
-    * if the file path is relative to the file root directory you must start the `filePath` string with `/`.<br/>Example: if the `find` captures a relative to the file root Javascript file without extension use: `"/$1.js"`
+    * if the file path is relative to the [file root](#html-related-links.fileroot) directory you must start the `filePath` string with `/`.<br/>Example: if the `find` captures a path, relative to the file root, for a Javascript file without extension use: `"/$1.js"`
+* `isAbsolutePath` : is the result of `filePath` an absolute path. default: `false`
 * `lineNr` : a string that constructs the line number to jump to using the captured groups from `find`.<br/>Example: `"find": "([\\w.]+)@(\\d+)", "lineNr": "$2"`
 * `charPos` : a string that constructs the character position to jump to using the captured groups from `find`. Only used when `lineNr` is defined.
 
@@ -60,7 +61,7 @@ If you use the default value for `filePath` you can replace the object by the `f
 
 ### Example 1
 
-You want to find files referenced in PHP `require` statements. You add the following 2 regular expressions in `settings.json` :
+You want to find files referenced in PHP `require` statements. Add the following 2 regular expressions in `settings.json` :
 
 ```
   "html-related-links.include": {
@@ -184,7 +185,7 @@ and you have opened `/home/myname/WebProjects` as a folder or part of a Multi Ro
 
 You can use the Settings GUI to modify this setting for any folder of the (MR) Workspace.
 
-This setting does not make sence to use in the global user setting.
+It does not make sence to use `html-related-links.fileroot` in the global user setting.
 
 ## `html-related-links.alwaysShow`
 
@@ -196,6 +197,10 @@ If you use a Multi Root Workspace you have to change it in the User settings or 
 ## `html-related-links.sortByPosition`
 
 Default the links in the view are sorted by the file path. If enabled the links are in the order found in the file. If a link is found multiple times the first position is used.
+
+## `html-related-links.removePathFromLabel`
+
+For links with lineNr's and absolute links the path is shown twice. Set this option to `true` to remove the path from the label of the row.
 
 ## TODO
 * add the possibility to create a file that does not exist

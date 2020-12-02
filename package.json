@@ -4,7 +4,7 @@
   "description": "View of related and linked files in HTML file",
   "publisher": "rioj7",
   "license": "MIT",
-  "version": "0.8.1",
+  "version": "0.9.0",
   "engines": {"vscode": "^1.40.0"},
   "categories": ["Other"],
   "keywords": ["html","related","links","multi-root ready"],
@@ -88,6 +88,10 @@
                   "charPos": {
                     "type": "string",
                     "description": "To which character position do you want to jump. Only used when `lineNr` is defined. No default"
+                  },
+                  "isAbsolutePath": {
+                    "type": "boolean",
+                    "description": "Is the result of 'filePath' an absolute path. default: false"
                   }
                 },
                 "required": ["find"],
@@ -121,6 +125,12 @@
           "default": false,
           "scope": "resource",
           "description": "sort the links in the view by position in the file"
+        },
+        "html-related-links.removePathFromLabel": {
+          "type": "boolean",
+          "default": false,
+          "scope": "resource",
+          "description": "Remove the file path from the label. Path shown twice if lineNr's or absolute paths."
         }
       }
     }

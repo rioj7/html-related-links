@@ -56,6 +56,8 @@ class HTMLRelatedLinksProvider {
     var exclude = config.get('exclude');
     var fileroot = config.get('fileroot');
     var sortByPosition = config.get('sortByPosition');
+    var removePathFromLabel = config.get('removePathFromLabel');
+    var removePathRE = new RegExp('.*?[\\\\/](?=[^\\\\/]+$)(.*)');
 
     var ownfilePath = document.uri.fsPath;
     var docFolder = path.dirname(ownfilePath);
@@ -72,7 +74,9 @@ class HTMLRelatedLinksProvider {
     }
     this.include = {};
     if (isArray(includeConfig)) {
-      this.updateInclude('all', includeConfig);
+      if (includeConfig.length > 0) {
+        this.updateInclude('all', includeConfig);
+      }
     } else {
       if (isObject(includeConfig)) {
         for (const languageId in includeConfig) {
@@ -99,7 +103,10 @@ class HTMLRelatedLinksProvider {
           let r1 = result[0].replace(replaceRE, includeObj.filePath);
           if (r1==='/') r1 = '/__root__';
           if (r1.length === 0) { continue; }
-          let linkPath = path.join(r1.startsWith('/') ? filerootFolder : docFolder, r1);
+          let linkPath = r1;
+          if (!includeObj.isAbsolutePath) {
+            linkPath = path.join(r1.startsWith('/') ? filerootFolder : docFolder, r1);
+          }
           if (linkPath === ownfilePath) { continue; }
           let lineNr = undefined;
           let charPos = undefined;
@@ -122,6 +129,9 @@ class HTMLRelatedLinksProvider {
           let key = label || linkPath;
           let filePos = result.index;
           if (!links.has(key) || (filePos < links.get(key).filePos)) {
+            if (label && removePathFromLabel) {
+              label = label.replace(removePathRE, '$1');
+            }
             links.set(key, {linkPath, lineNr, charPos, label, compareStr, filePos});
           }
         }
@@ -147,10 +157,11 @@ class HTMLRelatedLinksProvider {
       }
       let find = getProperty(listItem, 'find');
       let filePath = getProperty(listItem, 'filePath', '$1');
+      let isAbsolutePath = getProperty(listItem, 'isAbsolutePath');
       let lineNr = getProperty(listItem, 'lineNr');
       let charPos = getProperty(listItem, 'charPos');
       if (isString(find)) {
-        includeLanguageArr.push( {find, filePath, lineNr, charPos} );
+        includeLanguageArr.push( {find, filePath, lineNr, charPos, isAbsolutePath} );
       }
     }
   }
