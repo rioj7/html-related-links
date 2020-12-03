@@ -199,7 +199,7 @@ function activate(context) {
           editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
         });
       },
-      error => { vscode.window.showErrorMessage(error); }
+      error => { vscode.window.showErrorMessage(String(error)); }
     );
   }
   const setLockEditor = (editor) => {
