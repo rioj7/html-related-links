@@ -4,11 +4,13 @@ Add a View of related and linked files of the current file to the Explorer conta
 
 ![HTML Related Links View](images/html-related-links.png)
 
-The files will be sorted based on there full path.
+The files will be sorted based on there full path or line order in the file.
 
 If you click on an entry in the view that file will be opened. If the file does not exist nothing happens.
 
 The tags handled for HTML files are: `a`, `img`, `link`, `script`.
+
+It needs a [command to open a file](#open-a-file) and also makes it available to be called from a key binding or in a [multi-command](https://marketplace.visualstudio.com/items?itemName=ryuta46.multi-command) sequence.
 
 ## Lock view to a file
 
@@ -205,6 +207,32 @@ For links with lineNr's and absolute links the path is shown twice. Set this opt
 ## `html-related-links.enableLogging`
 
 If nothing happens when you click on a row you can enable a few logging statements to see which stage of the document loading succeeds.
+
+# Open a File
+
+It is not possible to use the **File** | **Open File ...** command (`workbench.action.files.openFile`) to open a file with a keybinding and a specified file path as argument.
+
+HTML Related Links has a command (`htmlRelatedLinks.openFile`) to open a file when you click on a row. This command is also exported to be used in a key binding or in a [multi-command](https://marketplace.visualstudio.com/items?itemName=ryuta46.multi-command).
+
+In the arguments you can also specify the line number and character position, they can be a number (`10`) or a string with a number (`"10"`).
+
+The `args` part must be an array with 1 to 3 elements:
+
+1. The file system path to the file (full path)
+1. The line number you want to place the cursor (default: previous visited line)
+1. The character position on the line you want to place the cursor, only used if line number present (default: 1 or previous character position)
+
+```
+  {
+    "key": "ctrl+i ctrl+o",  // or any other key binding
+    "command": "htmlRelatedLinks.openFile",
+    "args": [ "/home/mememe/Projects/Python/README.md", 10, 5 ]
+  }
+```
+
+**Note:** It is not possible to open files bigger than 50MB with this method. [VSC will not allow](https://github.com/microsoft/vscode/issues/111849).
+
+You will get an error message: `Files above 50MB cannot be synchronized with extensions`
 
 ## TODO
 * add the possibility to create a file that does not exist

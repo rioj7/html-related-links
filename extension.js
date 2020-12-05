@@ -184,6 +184,11 @@ class RelatedLink extends vscode.TreeItem {
 
 function activate(context) {
   const openFile = (uri, lineNr, charPos) => {
+    if (isArray(uri)) {
+      if (uri.length >= 3) { charPos = Number(uri[2]); }
+      if (uri.length >= 2) { lineNr = Number(uri[1]); }
+      uri = vscode.Uri.file(uri[0]);
+    }
     if (htmlRelatedLinksProvider.enableLogging) {
       console.log('Clicked on:', uri.fsPath);
       console.log(`    goto: ${lineNr}:${charPos||1}`);

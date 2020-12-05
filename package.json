@@ -4,14 +4,16 @@
   "description": "View of related and linked files in HTML file",
   "publisher": "rioj7",
   "license": "MIT",
-  "version": "0.9.2",
+  "version": "0.10.0",
   "engines": {"vscode": "^1.40.0"},
   "categories": ["Other"],
   "keywords": ["html","related","links","multi-root ready"],
   "icon": "images/icon.png",
   "galleryBanner": {"color": "#000080", "theme": "dark"},
   "activationEvents": [
-    "onView:htmlRelatedLinks", "onLanguage:html"
+    "onView:htmlRelatedLinks",
+    "onLanguage:html",
+    "onCommand:htmlRelatedLinks.openFile"
   ],
   "contributes": {
     "commands": [
@@ -26,6 +28,11 @@
         "title": "Unlock file",
         "category": "Related Links",
         "icon": "$(lock)"
+      },
+      {
+        "command": "htmlRelatedLinks.openFile",
+        "title": "Open File on Line and Char position",
+        "category": "Related Links"
       }
     ],
     "views": {
