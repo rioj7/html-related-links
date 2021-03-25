@@ -214,9 +214,59 @@ It is not possible to use the **File** | **Open File ...** command (`workbench.a
 
 HTML Related Links has a command (`htmlRelatedLinks.openFile`) to open a file when you click on a row. This command is also exported to be used in a key binding or in a [multi-command](https://marketplace.visualstudio.com/items?itemName=ryuta46.multi-command).
 
-In the arguments you can also specify the line number and character position, they can be a number (`10`) or a string with a number (`"10"`).
+There are 2 possibilities for the `args` property of the command:
+* an array with maximum 3 elements
+* an object with properties
 
-The `args` part must be an array with 1 to 3 elements:
+The file system path can be a full path or constructed from variables and static text. The variables used are constructed from the file path of the current active editor. See the [VSC page on variables](https://code.visualstudio.com/docs/editor/variables-reference) for an explanation.
+
+The variables allowed are:
+
+* `${workspaceFolder}`
+* `${fileWorkspaceFolder}`
+* `${workspaceFolderBasename}`
+* `${relativeFile}`
+* `${fileDirname}`
+* `${relativeFileDirname}`
+* `${fileBasename}`
+* `${fileBasenameNoExtension}`
+* `${fileExtname}`
+
+The line number and character position, they can be a number (`10`) or a string with a number (`"10"`).
+
+### Example: open the file with a different file extension and in a different viewColumn
+
+Create the following keybindings:
+
+```
+  {
+    "key": "ctrl+i r",
+    "command": "htmlRelatedLinks.openFile",
+    "args": {
+      "file": "${fileDirname}/${fileBasenameNoExtension}.html",
+      "method": "vscode.open",
+      "viewColumn": "split"
+    },
+    "when": "editorTextFocus && editorLangId == typescript"
+  },
+  {
+    "key": "ctrl+i r",
+    "command": "htmlRelatedLinks.openFile",
+    "args": {
+      "file": "${fileDirname}/${fileBasenameNoExtension}.ts",
+      "method": "vscode.open",
+      "viewColumn": "split"
+    },
+    "when": "editorTextFocus && editorLangId == html"
+  }
+```
+
+Based on the languageId of the current file we choose a different file extension.
+
+
+## `args` is an array
+
+The `args` part can be an array with 1 to 3 elements:
 
 1. The file system path to the file (full path)
 1. The line number you want to place the cursor (default: previous visited line)
@@ -230,9 +280,29 @@ The `args` part must be an array with 1 to 3 elements:
   }
 ```
 
+## `args` is an object
+
+The `args` object has the following properties:
+
+* `file` : The file system path to the file (full path)
+* `lineNr` : The line number you want to place the cursor (default: previous visited line)
+* `charPos` : The character position on the line you want to place the cursor, only used if line number present (default: 1 or previous character position)
+* `method` : with which method to open the file (default: `openShow`):
+    * `openShow` : use `vscode.workspace.openTextDocument` and `vscode.workspace.showTextDocument`
+    * `vscode.open` : use `vscode.open` command, if the file does not exists you can create it from the error message.
+* `viewColumn` : In which column to open this file, only used if `method` is `vscode.open` (default: `active`):
+    * `1` ... `9` : open in column _n_
+    * `active` : open in current column 
+    * `beside` : open in column 1 number higher
+    * `split` : assumes you use a 2 column layout (column 1 and 2) and it chooses the other column.
+
+# Known problem
+
 **Note:** It is not possible to open files bigger than 50MB with this method. [VSC will not allow](https://github.com/microsoft/vscode/issues/111849).
 
 You will get an error message: `Files above 50MB cannot be synchronized with extensions`
 
-## TODO
+This is when using an array as argument or when `method` is `openShow`. I don't know if we have this problem when `method` is `vscode.open`
+
+# TODO
 * add the possibility to create a file that does not exist

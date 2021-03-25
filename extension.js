@@ -5,6 +5,7 @@ const getProperty = (obj, prop, deflt) => { return obj.hasOwnProperty(prop) ? ob
 const isString = obj => typeof obj === 'string';
 const isObject = obj => typeof obj === 'object';
 const isArray = obj => Array.isArray(obj);
+const isUri = obj => isObject(obj) && obj.hasOwnProperty('scheme');
 
 class HTMLRelatedLinksProvider {
   constructor() {
@@ -172,7 +173,7 @@ class RelatedLink extends vscode.TreeItem {
   constructor(linkObj) {
     super(vscode.Uri.file(linkObj.linkPath));
     this.command = { command: "htmlRelatedLinks.openFile", arguments: [this.resourceUri, linkObj.lineNr, linkObj.charPos], title: '' };
-    this.iconPath = false; // use theme icon
+    this.iconPath = vscode.ThemeIcon.File;
     this.description = true; // use resource URI
     this.label = linkObj.label; // use label when set
     // this.contextValue = 'link'; // used for menu entries
@@ -182,26 +183,82 @@ class RelatedLink extends vscode.TreeItem {
   }
 }
 
+function revealPosition(editor, lineNr, charPos) {
+  if (!lineNr) return;
+  charPos = charPos || 1;
+  let position = new vscode.Position(lineNr-1, charPos-1);
+  editor.selections = [new vscode.Selection(position, position)];
+  editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+}
+
 function activate(context) {
-  const openFile = (uri, lineNr, charPos) => {
-    if (isArray(uri)) {
-      if (uri.length >= 3) { charPos = Number(uri[2]); }
-      if (uri.length >= 2) { lineNr = Number(uri[1]); }
-      uri = vscode.Uri.file(uri[0]);
+  const openFile = (uri, lineNr, charPos, method, viewColumn) => {
+    let args = uri;
+    if (isObject(args) && !isUri(args)) {
+      uri = getProperty(args, 'file', 'Unknown');
+      lineNr = getProperty(args, 'lineNr');
+      charPos = getProperty(args, 'charPos');
+      method = getProperty(args, 'method');
+      viewColumn = getProperty(args, 'viewColumn');
+    }
+    if (isArray(args)) {
+      if (args.length >= 3) { charPos = args[2]; }
+      if (args.length >= 2) { lineNr = args[1]; }
+      uri = args[0];
+    }
+    lineNr = Number(lineNr);
+    charPos = Number(charPos);
+    viewColumn = viewColumn || vscode.ViewColumn.Active;
+    if (viewColumn === 'active') { viewColumn = vscode.ViewColumn.Active; }
+    if (viewColumn === 'beside') { viewColumn = vscode.ViewColumn.Beside; }
+    let editor = vscode.window.activeTextEditor;
+    if (viewColumn === 'split')  { viewColumn = editor.viewColumn === 1 ? 2 : 1; }
+    let workspace = editor ? vscode.workspace.getWorkspaceFolder(editor.document.uri) : undefined;
+    if (isString(uri) && (uri.indexOf('${') >= 0) && workspace) {
+      let file = editor.document.fileName;
+      let workspaceFolder = workspace.uri.fsPath;
+      let workspaceFolderBasename = path.basename(workspaceFolder);
+      let relativeFile = file.substring(workspaceFolder.length+1);
+      let fileDirname = path.dirname(file);
+      let relativeFileDirname = fileDirname.substring(workspaceFolder.length+1);
+      let fileBasename = path.basename(file);
+      let fileExtname = path.extname(file);
+      let fileBasenameNoExtension = fileBasename.substring(0, fileBasename.length-fileExtname.length);
+      uri = uri.replace('${workspaceFolder}', workspaceFolder);
+      uri = uri.replace('${fileWorkspaceFolder}', workspaceFolder);
+      uri = uri.replace('${workspaceFolderBasename}', workspaceFolderBasename);
+      uri = uri.replace('${relativeFile}', relativeFile);
+      uri = uri.replace('${fileDirname}', fileDirname);
+      uri = uri.replace('${relativeFileDirname}', relativeFileDirname);
+      uri = uri.replace('${fileBasename}', fileBasename);
+      uri = uri.replace('${fileBasenameNoExtension}', fileBasenameNoExtension);
+      uri = uri.replace('${fileExtname}', fileExtname);
+    }
+    if (isString(uri)) {
+      uri = vscode.Uri.file(uri);
     }
     if (htmlRelatedLinksProvider.enableLogging) {
       console.log('Clicked on:', uri.fsPath);
       console.log(`    goto: ${lineNr}:${charPos||1}`);
     }
+    if (method === 'vscode.open') {
+      let showOptions = { preserveFocus:true, preview:false, viewColumn};
+      vscode.commands.executeCommand('vscode.open', uri, showOptions)
+      .then( () => {
+          let editor = vscode.window.activeTextEditor;
+          if (!editor) { return; }
+          revealPosition(editor, lineNr, charPos);
+        },
+        error => { vscode.window.showErrorMessage(String(error)); }
+      );
+      return;
+    }
+
     vscode.workspace.openTextDocument(uri).then(document => {
         if (htmlRelatedLinksProvider.enableLogging) { console.log('Document opened:', uri.fsPath); }
         vscode.window.showTextDocument(document, vscode.ViewColumn.Active, false).then( editor => {
           if (htmlRelatedLinksProvider.enableLogging) { console.log('Editor opened:', uri.fsPath); }
-          if (!lineNr) return;
-          charPos = charPos || 1;
-          let position = new vscode.Position(lineNr-1, charPos-1);
-          editor.selections = [new vscode.Selection(position, position)];
-          editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+          revealPosition(editor, lineNr, charPos);
         });
       },
       error => { vscode.window.showErrorMessage(String(error)); }
@@ -213,7 +270,7 @@ function activate(context) {
   };
   const htmlRelatedLinksProvider = new HTMLRelatedLinksProvider();
   vscode.window.registerTreeDataProvider('htmlRelatedLinks', htmlRelatedLinksProvider);
-  context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.openFile', (uri, lineNr, charPos) => { openFile(uri, lineNr, charPos); }) );
+  context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.openFile', (uri, lineNr, charPos, method) => { openFile(uri, lineNr, charPos, method); }) );
   context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.fileLock', () => { setLockEditor(vscode.window.activeTextEditor); }) );
   context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.fileUnlock', () => { setLockEditor(undefined); }) );
   vscode.window.onDidChangeTextEditorSelection(
