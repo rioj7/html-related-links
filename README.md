@@ -8,6 +8,8 @@ The files will be sorted based on there full path or line order in the file.
 
 If you click on an entry in the view that file will be opened. If the file does not exist nothing happens.
 
+If you click on the **Open File or Create File** icon it uses a different method to open the file that gives the option to create the file and it is also able to open other file types like images.
+
 The tags handled for HTML files are: `a`, `img`, `link`, `script`.
 
 It needs a [command to open a file](#open-a-file) and also makes it available to be called from a key binding or in a [multi-command](https://marketplace.visualstudio.com/items?itemName=ryuta46.multi-command) sequence.
@@ -302,7 +304,6 @@ The `args` object has the following properties:
 
 You will get an error message: `Files above 50MB cannot be synchronized with extensions`
 
-This is when using an array as argument or when `method` is `openShow`. I don't know if we have this problem when `method` is `vscode.open`
+This is when using an array as argument or when `method` is `openShow`. I don't know if we have this problem when `method` is `vscode.open`.
 
-# TODO
-* add the possibility to create a file that does not exist
+The **Open File or Create File** icon (on the item context menu) uses the `vscode.open` method.

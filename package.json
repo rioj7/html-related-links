@@ -4,7 +4,7 @@
   "description": "View of related and linked files in HTML file",
   "publisher": "rioj7",
   "license": "MIT",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "engines": {"vscode": "^1.50.0"},
   "categories": ["Other"],
   "keywords": ["html","related","links","multi-root ready"],
@@ -33,13 +33,19 @@
         "command": "htmlRelatedLinks.openFile",
         "title": "Open File on Line and Char position",
         "category": "Related Links"
+      },
+      {
+        "command": "htmlRelatedLinks.createFile",
+        "title": "Open File or Create File",
+        "category": "Related Links",
+        "icon": "$(new-file)"
       }
     ],
     "views": {
       "explorer": [
         {
           "id": "htmlRelatedLinks",
-          "name": "HTML Related Links",
+          "name": "Related Links",
           "when": "htmlRelatedLinks:fileIsHTML || config.html-related-links.alwaysShow"
         }
       ]
@@ -55,6 +61,13 @@
           "command": "htmlRelatedLinks.fileUnlock",
           "when": "view == htmlRelatedLinks && htmlRelatedLinks:fileIsLocked",
           "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "htmlRelatedLinks.createFile",
+          "when": "view == htmlRelatedLinks && viewItem == relatedFile",
+          "group": "inline"
         }
       ]
     },

@@ -6,6 +6,8 @@ const isString = obj => typeof obj === 'string';
 const isObject = obj => typeof obj === 'object';
 const isArray = obj => Array.isArray(obj);
 const isUri = obj => isObject(obj) && obj.hasOwnProperty('scheme');
+const convert = (value, func) => { return value !== undefined ? func(value) : value; }
+const convertToNumber = value => convert(value, n => Number(n));
 
 class HTMLRelatedLinksProvider {
   constructor() {
@@ -176,7 +178,7 @@ class RelatedLink extends vscode.TreeItem {
     this.iconPath = vscode.ThemeIcon.File;
     this.description = true; // use resource URI
     this.label = linkObj.label; // use label when set
-    // this.contextValue = 'link'; // used for menu entries
+    this.contextValue = 'relatedFile'; // used for menu entries
   }
   get tooltip() {
     return `${this.resourceUri.fsPath}`;
@@ -206,8 +208,8 @@ function activate(context) {
       if (args.length >= 2) { lineNr = args[1]; }
       uri = args[0];
     }
-    lineNr = Number(lineNr);
-    charPos = Number(charPos);
+    lineNr = convertToNumber(lineNr);
+    charPos = convertToNumber(charPos);
     viewColumn = viewColumn || vscode.ViewColumn.Active;
     if (viewColumn === 'active') { viewColumn = vscode.ViewColumn.Active; }
     if (viewColumn === 'beside') { viewColumn = vscode.ViewColumn.Beside; }
@@ -271,6 +273,7 @@ function activate(context) {
   const htmlRelatedLinksProvider = new HTMLRelatedLinksProvider();
   vscode.window.registerTreeDataProvider('htmlRelatedLinks', htmlRelatedLinksProvider);
   context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.openFile', (uri, lineNr, charPos, method) => { openFile(uri, lineNr, charPos, method); }) );
+  context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.createFile', relatedLink => { openFile(...relatedLink.command.arguments, 'vscode.open'); }) );
   context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.fileLock', () => { setLockEditor(vscode.window.activeTextEditor); }) );
   context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.fileUnlock', () => { setLockEditor(undefined); }) );
   vscode.window.onDidChangeTextEditorSelection(
