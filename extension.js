@@ -235,6 +235,7 @@ function activate(context) {
       uri = uri.replace('${fileBasename}', fileBasename);
       uri = uri.replace('${fileBasenameNoExtension}', fileBasenameNoExtension);
       uri = uri.replace('${fileExtname}', fileExtname);
+      uri = uri.replace(/\$\{env:([^}]+)\}/, (m, p1) => getProperty(process.env, p1, 'Unknown') );
     }
     if (isString(uri)) {
       uri = vscode.Uri.file(uri);

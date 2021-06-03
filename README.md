@@ -233,6 +233,7 @@ The variables allowed are:
 * `${fileBasename}`
 * `${fileBasenameNoExtension}`
 * `${fileExtname}`
+* <code>${env:<em>Name</em>}</code>
 
 The line number and character position, they can be a number (`10`) or a string with a number (`"10"`).
 
