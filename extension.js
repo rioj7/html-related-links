@@ -147,6 +147,7 @@ class HTMLRelatedLinksProvider {
     let collator = Intl.Collator().compare;
     let compareFunc = sortByPosition ? (a,b) => a.filePos - b.filePos : (a,b) => collator(a.compareStr, b.compareStr);
     this.content = linksAr.sort( compareFunc ).map(x => new RelatedLink(x));
+    // this.content.push(new vscode.TreeItem({label:'Blablablablabla', highlights:[[0,5],[8,12]]}));
     return Promise.resolve(this.content);
   }
   updateInclude(languageId, list) {
@@ -193,6 +194,24 @@ function revealPosition(editor, lineNr, charPos) {
   editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
 }
 
+function dblQuest(value, deflt) { return value !== undefined ? value : deflt; }
+var getNamedWorkspaceFolder = (name, workspaceFolder, editor) => {
+  const folders = dblQuest(vscode.workspace.workspaceFolders, []);
+  let filterPred = w => w.name === name;
+  let index = undefined;
+  if (name[0] === '[') {
+    index = Number(name.substring(1, name.length-1));
+    filterPred = (w, idx) => idx === index;
+  }
+  if (name.indexOf('/') >= 0) { filterPred = w => w.uri.path.endsWith(name); }
+  let wsfLst = folders.filter(filterPred);
+  if (wsfLst.length === 0) {
+    vscode.window.showErrorMessage(`Workspace not found with name: ${name}`);
+    return undefined;
+  }
+  return wsfLst[0];
+};
+
 function activate(context) {
   const openFile = (uri, lineNr, charPos, method, viewColumn) => {
     let args = uri;
@@ -214,28 +233,66 @@ function activate(context) {
     if (viewColumn === 'active') { viewColumn = vscode.ViewColumn.Active; }
     if (viewColumn === 'beside') { viewColumn = vscode.ViewColumn.Beside; }
     let editor = vscode.window.activeTextEditor;
-    if (viewColumn === 'split')  { viewColumn = editor.viewColumn === 1 ? 2 : 1; }
-    let workspace = editor ? vscode.workspace.getWorkspaceFolder(editor.document.uri) : undefined;
-    if (isString(uri) && (uri.indexOf('${') >= 0) && workspace) {
-      let file = editor.document.fileName;
-      let workspaceFolder = workspace.uri.fsPath;
-      let workspaceFolderBasename = path.basename(workspaceFolder);
-      let relativeFile = file.substring(workspaceFolder.length+1);
-      let fileDirname = path.dirname(file);
-      let relativeFileDirname = fileDirname.substring(workspaceFolder.length+1);
-      let fileBasename = path.basename(file);
-      let fileExtname = path.extname(file);
-      let fileBasenameNoExtension = fileBasename.substring(0, fileBasename.length-fileExtname.length);
-      uri = uri.replace('${workspaceFolder}', workspaceFolder);
-      uri = uri.replace('${fileWorkspaceFolder}', workspaceFolder);
-      uri = uri.replace('${workspaceFolderBasename}', workspaceFolderBasename);
-      uri = uri.replace('${relativeFile}', relativeFile);
-      uri = uri.replace('${fileDirname}', fileDirname);
-      uri = uri.replace('${relativeFileDirname}', relativeFileDirname);
-      uri = uri.replace('${fileBasename}', fileBasename);
-      uri = uri.replace('${fileBasenameNoExtension}', fileBasenameNoExtension);
-      uri = uri.replace('${fileExtname}', fileExtname);
-      uri = uri.replace(/\$\{env:([^}]+)\}/, (m, p1) => getProperty(process.env, p1, 'Unknown') );
+    if (viewColumn === 'split' && editor)  { viewColumn = editor.viewColumn === 1 ? 2 : 1; }
+    if (isString(uri) && (uri.indexOf('${') >= 0)) {
+      uri = uri.replace(/\$\{env:([^}]+)\}/, (m, p1) => {
+        if (htmlRelatedLinksProvider.enableLogging) {
+          console.log('Use environment variable:', p1);
+        }
+        return getProperty(process.env, p1, 'Unknown');
+      } );
+      uri = uri.replace(/\$\{workspaceFolder:(.+?)\}/, (m, p1) => {
+        let wsf = getNamedWorkspaceFolder(p1);
+        if (!wsf) { return 'Unknown'; }
+        return wsf.uri.fsPath;
+      });
+      let workspace = undefined;
+      let editorWorkspace = undefined;
+      let file = undefined;
+      let fileDirname = undefined;
+      let workspaceFolder = undefined;
+
+      if (editor) {
+        editorWorkspace = vscode.workspace.getWorkspaceFolder(editor.document.uri);
+        file = editor.document.fileName;
+        fileDirname = path.dirname(file);
+        let fileBasename = path.basename(file);
+        let fileExtname = path.extname(file);
+        let fileBasenameNoExtension = fileBasename.substring(0, fileBasename.length-fileExtname.length);
+        uri = uri.replace('${fileDirname}', fileDirname);
+        uri = uri.replace('${fileBasename}', fileBasename);
+        uri = uri.replace('${fileBasenameNoExtension}', fileBasenameNoExtension);
+        uri = uri.replace('${fileExtname}', fileExtname);
+      }
+      if (uri.indexOf('${') >= 0) {  // workspace related variables
+        const wsfolders = dblQuest(vscode.workspace.workspaceFolders, []);
+        if (wsfolders.length === 0) {
+          vscode.window.showErrorMessage('No Workspace');
+          return;
+        }
+        if (wsfolders.length === 1) {
+          workspace = wsfolders[0];
+        } else {
+          workspace = editorWorkspace;
+          if (!workspace) {
+            vscode.window.showErrorMessage('Use named Workspace');
+            return;
+          }
+        }
+        if (workspace) {
+          workspaceFolder = workspace.uri.fsPath;
+          let workspaceFolderBasename = path.basename(workspaceFolder);
+          uri = uri.replace('${workspaceFolder}', workspaceFolder);
+          uri = uri.replace('${workspaceFolderBasename}', workspaceFolderBasename);
+        }
+        if (editorWorkspace) {
+          let relativeFile = file.substring(workspaceFolder.length+1);
+          let relativeFileDirname = fileDirname.substring(workspaceFolder.length+1);
+          uri = uri.replace('${fileWorkspaceFolder}', workspaceFolder);
+          uri = uri.replace('${relativeFile}', relativeFile);
+          uri = uri.replace('${relativeFileDirname}', relativeFileDirname);
+        }
+      }
     }
     if (isString(uri)) {
       uri = vscode.Uri.file(uri);

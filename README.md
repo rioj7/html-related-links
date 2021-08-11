@@ -234,6 +234,9 @@ The variables allowed are:
 * `${fileBasenameNoExtension}`
 * `${fileExtname}`
 * <code>${env:<em>Name</em>}</code>
+* <code>${workspaceFolder:<em>Name</em>}</code> : In Multi Root Workspaces use the workspace with the given <em>Name</em>
+* <code>${workspaceFolder:<em>/path/to/Name</em>}</code> : In Multi Root Workspaces use the workspace where the path ends with <em>/path/to/Name</em> in case multiple workspaces have the same <em>Name</em>
+* <code>${workspaceFolder:[<em>Number</em>]}</code> : Use workspace <em>Number</em> (0-based)
 
 The line number and character position, they can be a number (`10`) or a string with a number (`"10"`).
 
