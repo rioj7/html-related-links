@@ -4,7 +4,7 @@
   "description": "View of related and linked files in HTML file",
   "publisher": "rioj7",
   "license": "MIT",
-  "version": "0.13.2",
+  "version": "0.14.0",
   "engines": {"vscode": "^1.50.0"},
   "categories": ["Other"],
   "keywords": ["html","related","links","multi-root ready"],
@@ -13,7 +13,8 @@
   "activationEvents": [
     "onView:htmlRelatedLinks",
     "onLanguage:html",
-    "onCommand:htmlRelatedLinks.openFile"
+    "onCommand:htmlRelatedLinks.openFile",
+    "onCommand:htmlRelatedLinks.openURL"
   ],
   "contributes": {
     "commands": [
@@ -32,6 +33,11 @@
       {
         "command": "htmlRelatedLinks.openFile",
         "title": "Open File on Line and Char position",
+        "category": "Related Links"
+      },
+      {
+        "command": "htmlRelatedLinks.openURL",
+        "title": "Open an URL, (http and https)",
         "category": "Related Links"
       },
       {

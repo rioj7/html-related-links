@@ -311,3 +311,8 @@ You will get an error message: `Files above 50MB cannot be synchronized with ext
 This is when using an array as argument or when `method` is `openShow`. I don't know if we have this problem when `method` is `vscode.open`.
 
 The **Open File or Create File** icon (on the item context menu) uses the `vscode.open` method.
+
+# Release Notes
+
+### v0.14.0
+* `htmlRelatedLinks.openURL` same functionality as Cltl-Link-Click but from a keybinding
