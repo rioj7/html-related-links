@@ -314,5 +314,8 @@ The **Open File or Create File** icon (on the item context menu) uses the `vscod
 
 # Release Notes
 
+### v0.14.1
+* `htmlRelatedLinks.openURLGitAlias` open a git alias page on github
+
 ### v0.14.0
 * `htmlRelatedLinks.openURL` same functionality as Cltl-Link-Click but from a keybinding

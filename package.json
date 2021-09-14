@@ -4,7 +4,7 @@
   "description": "View of related and linked files in HTML file",
   "publisher": "rioj7",
   "license": "MIT",
-  "version": "0.14.0",
+  "version": "0.14.1",
   "engines": {"vscode": "^1.50.0"},
   "categories": ["Other"],
   "keywords": ["html","related","links","multi-root ready"],
@@ -14,7 +14,8 @@
     "onView:htmlRelatedLinks",
     "onLanguage:html",
     "onCommand:htmlRelatedLinks.openFile",
-    "onCommand:htmlRelatedLinks.openURL"
+    "onCommand:htmlRelatedLinks.openURL",
+    "onCommand:htmlRelatedLinks.openURLGitAlias"
   ],
   "contributes": {
     "commands": [
@@ -39,6 +40,11 @@
         "command": "htmlRelatedLinks.openURL",
         "title": "Open an URL, (http and https)",
         "category": "Related Links"
+      },
+      {
+        "command": "htmlRelatedLinks.openURLGitAlias",
+        "title": "Open Aliases",
+        "category": "Git"
       },
       {
         "command": "htmlRelatedLinks.createFile",
