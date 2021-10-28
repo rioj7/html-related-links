@@ -1,10 +1,10 @@
 {
   "name": "html-related-links",
   "displayName": "HTML Related Links",
-  "description": "View of related and linked files in HTML file",
+  "description": "View of related and linked files",
   "publisher": "rioj7",
   "license": "MIT",
-  "version": "0.14.1",
+  "version": "0.14.2",
   "engines": {"vscode": "^1.50.0"},
   "categories": ["Other"],
   "keywords": ["html","related","links","multi-root ready"],
@@ -58,7 +58,7 @@
         {
           "id": "htmlRelatedLinks",
           "name": "Related Links",
-          "when": "htmlRelatedLinks:fileIsHTML || config.html-related-links.alwaysShow"
+          "when": "htmlRelatedLinks:fileIsHTML && config.html-related-links.showIfHTML || config.html-related-links.alwaysShow"
         }
       ]
     },
@@ -150,13 +150,19 @@
           "type": "boolean",
           "default": false,
           "scope": "resource",
-          "description": "show \"HTML Related Links\" view when file language is not HTML"
+          "description": "Always show \"Related Links\" view"
+        },
+        "html-related-links.showIfHTML": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "Show \"Related Links\" view when file language is HTML"
         },
         "html-related-links.sortByPosition": {
           "type": "boolean",
           "default": false,
           "scope": "resource",
-          "description": "sort the links in the view by position in the file"
+          "description": "Sort the links in the view by position in the file"
         },
         "html-related-links.removePathFromLabel": {
           "type": "boolean",

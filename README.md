@@ -2,7 +2,7 @@
 
 Add a View of related and linked files of the current file to the Explorer container.
 
-![HTML Related Links View](images/html-related-links.png)
+![Related Links View](images/html-related-links.png)
 
 The files will be sorted based on there full path or line order in the file.
 
@@ -193,10 +193,14 @@ It does not make sence to use `html-related-links.fileroot` in the global user s
 
 ## `html-related-links.alwaysShow`
 
-This boolean is used to determine if the HTML Related Links view is visible if the languageId of the file is not HTML. Default value is `false`. This means that the view is only visible when the current file has the languageId `'html'`.
+This boolean is used to determine if the Related Links view is visible if the languageId of the file is not HTML. Default value is `false`. This means that the view is only visible when the current file has the languageId `'html'`.
 If you use the extension for other languageIds set the value to `true`.
 
 If you use a Multi Root Workspace you have to change it in the User settings or the Workspace setting. If defined in a Folder it does not work (VSC v1.44.2)
+
+## `html-related-links.showIfHTML`
+
+This boolean is used to determine if the Related Links view is visible if the languageId of the file is HTML. Default value is `true`.
 
 ## `html-related-links.sortByPosition`
 
@@ -313,6 +317,9 @@ This is when using an array as argument or when `method` is `openShow`. I don't 
 The **Open File or Create File** icon (on the item context menu) uses the `vscode.open` method.
 
 # Release Notes
+
+### v0.14.2
+* `html-related-links.showIfHTML` to disable view even for HTML files, if only use the openFile command
 
 ### v0.14.1
 * `htmlRelatedLinks.openURLGitAlias` open a git alias page on github
