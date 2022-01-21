@@ -4,7 +4,7 @@
   "description": "View of related and linked files",
   "publisher": "rioj7",
   "license": "MIT",
-  "version": "0.14.2",
+  "version": "0.15.0",
   "engines": {"vscode": "^1.50.0"},
   "categories": ["Other"],
   "keywords": ["html","related","links","multi-root ready"],
@@ -174,7 +174,7 @@
           "type": "boolean",
           "default": false,
           "scope": "resource",
-          "description": "Show a few log statements when clicked on a row. Used for debugging."
+          "description": "Show a few log statements when clicked on a row or opening a file. Used for debugging."
         }
       }
     }

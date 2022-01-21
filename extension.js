@@ -214,13 +214,19 @@ var getNamedWorkspaceFolder = (name, workspaceFolder, editor) => {
 
 function activate(context) {
   const openFile = (uri, lineNr, charPos, method, viewColumn) => {
+    if (!htmlRelatedLinksProvider.enableLogging) {
+      var config = vscode.workspace.getConfiguration('html-related-links');
+      htmlRelatedLinksProvider.enableLogging = config.get('enableLogging');
+    }
     let args = uri;
+    let scheme = undefined;
     if (isObject(args) && !isUri(args)) {
       uri = getProperty(args, 'file', 'Unknown');
       lineNr = getProperty(args, 'lineNr');
       charPos = getProperty(args, 'charPos');
       method = getProperty(args, 'method');
       viewColumn = getProperty(args, 'viewColumn');
+      scheme = getProperty(args, 'useScheme');
     }
     if (isArray(args)) {
       if (args.length >= 3) { charPos = args[2]; }
@@ -297,7 +303,12 @@ function activate(context) {
     if (isString(uri)) {
       uri = vscode.Uri.file(uri);
     }
+    if (scheme) {
+      uri = uri.with({scheme});
+    }
     if (htmlRelatedLinksProvider.enableLogging) {
+      console.log('URI', JSON.stringify(uri.toJSON()));
+      console.log('URI', uri.toString());
       console.log('Clicked on:', uri.fsPath);
       console.log(`    goto: ${lineNr}:${charPos||1}`);
     }

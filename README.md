@@ -305,6 +305,9 @@ The `args` object has the following properties:
     * `active` : open in current column 
     * `beside` : open in column 1 number higher
     * `split` : assumes you use a 2 column layout (column 1 and 2) and it chooses the other column.
+* `useScheme` : the scheme to use for the URI: `file`, `vscode-remote` (maybe others can be used).<br/>                       `vscode.URI` has an attribute `scheme` and I need to be able to determine what object is passed.
+
+If the opened file is un **Untitled** file you probably have used the property name `scheme`, it must be `useScheme`.
 
 # Known problem
 
@@ -317,6 +320,9 @@ This is when using an array as argument or when `method` is `openShow`. I don't 
 The **Open File or Create File** icon (on the item context menu) uses the `vscode.open` method.
 
 # Release Notes
+
+### v0.15.0
+* `htmlRelatedLinks.openFile` set the scheme to use.
 
 ### v0.14.2
 * `html-related-links.showIfHTML` to disable view even for HTML files, if only use the openFile command
