@@ -228,15 +228,15 @@ The file system path can be a full path or constructed from variables and static
 
 The variables allowed are:
 
-* `${workspaceFolder}`
-* `${fileWorkspaceFolder}`
-* `${workspaceFolderBasename}`
-* `${relativeFile}`
-* `${fileDirname}`
-* `${relativeFileDirname}`
-* `${fileBasename}`
-* `${fileBasenameNoExtension}`
-* `${fileExtname}`
+* `${workspaceFolder}` (**Transform**)
+* `${fileWorkspaceFolder}` (**Transform**)
+* `${workspaceFolderBasename}` (**Transform**)
+* `${relativeFile}` (**Transform**)
+* `${fileDirname}` (**Transform**)
+* `${relativeFileDirname}` (**Transform**)
+* `${fileBasename}` (**Transform**)
+* `${fileBasenameNoExtension}` (**Transform**)
+* `${fileExtname}` (**Transform**)
 * <code>${env:<em>Name</em>}</code>
 * <code>${workspaceFolder:<em>Name</em>}</code> : In Multi Root Workspaces use the workspace with the given <em>Name</em>
 * <code>${workspaceFolder:<em>/path/to/Name</em>}</code> : In Multi Root Workspaces use the workspace where the path ends with <em>/path/to/Name</em> in case multiple workspaces have the same <em>Name</em>
@@ -244,7 +244,37 @@ The variables allowed are:
 
 The line number and character position, they can be a number (`10`) or a string with a number (`"10"`).
 
-### Example: open the file with a different file extension and in a different viewColumn
+## Variable properties
+
+Some variables can have properties. This is part of the variable and needs to be specified using separator strings.
+
+<code>&dollar;{<em>variableName</em> <em>separator</em> <em>properties</em> <em>separator</em>}</code>
+
+All _`separator`_'s used in a variable need to be the same.
+
+The _`separator`_ is a string of 1 or more characters that are not part of the a to z alfabet, `$` or `{}`, in regular expression `[^a-zA-Z{}$]+`. Choose a character string that is not used in the  _`properties`_ part. If you need to use more than 1 character be carefull if you use the same character, you can experience unwanted behavior. The reason is that JavaScript regular expression does not have a non-backtrack greedy quantifier. Currently the variable is matched with 1 regular expression. This makes everything easy to implement.
+
+The _`properties`_ part uses the same _`separator`_ string to separate the different properties.
+
+In the description the `:` is used as the separator, choose a different one if you use this character in the variable property.
+
+All variables can span multiple lines to make the properties more readable. All whitespace at the start of a property is removed. Prevent whitespace at the end of a property value by ending a line with the _`separator`_.
+
+If the property is a <code><em>key</em>=<em>value</em></code> pair the whitespace around `=` is part of the _`key`_ or the _`value`_.
+
+## Variable Transform (Find/Replace)
+
+The variables marked in the description with (**Transform**) can have the value transformed with 1 or more find-replace operations. The transforms are applied in the order given.
+
+Each transform is defined with the following properties:
+
+<code>find=<em>regex</em>:flags=<em>string</em>:replace=<em>string</em></code>
+
+The text is [searched and replaced with a regular expression](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace). All occurrences of `find` are replaced if `flags` has `g`. The capture groups in the `find` regex can be used in the `replace` string with <code>&dollar;<em>n</em></code> (like `$1`). `flags` are the regex flags used in the search. If `find`, `flags` or `replace` property are not defined they default to `(.*)`, _emptyString_ and `$1` respectively.
+
+You can define as many `[0...)` find-replace transforms as you like.
+
+## Example: open the file with a different file extension and in a different viewColumn
 
 Create the following keybindings:
 
@@ -305,7 +335,8 @@ The `args` object has the following properties:
     * `active` : open in current column 
     * `beside` : open in column 1 number higher
     * `split` : assumes you use a 2 column layout (column 1 and 2) and it chooses the other column.
-* `useScheme` : the scheme to use for the URI: `file`, `vscode-remote` (maybe others can be used).<br/>                       `vscode.URI` has an attribute `scheme` and I need to be able to determine what object is passed.
+* `useScheme` : the scheme to use for the URI: `file`, `vscode-remote`, `vscode-local` (maybe others can be used).
+    * `vscode.URI` has an attribute `scheme` and I need to be able to determine what object is passed.
 
 If the opened file is un **Untitled** file you probably have used the property name `scheme`, it must be `useScheme`.
 
@@ -320,6 +351,9 @@ This is when using an array as argument or when `method` is `openShow`. I don't 
 The **Open File or Create File** icon (on the item context menu) uses the `vscode.open` method.
 
 # Release Notes
+
+### v0.16.0
+* `htmlRelatedLinks.openFile` variables now have a (multiple) find/replace option
 
 ### v0.15.0
 * `htmlRelatedLinks.openFile` set the scheme to use.

@@ -212,6 +212,89 @@ var getNamedWorkspaceFolder = (name, workspaceFolder, editor) => {
   return wsfLst[0];
 };
 
+function getVariableWithParamsRegex(varName, flags) { return new RegExp(`\\$\\{${varName}(\\}|([^a-zA-Z{}$]+)([\\s\\S]+?)\\2\\})`, flags); }
+
+class FindProperties {
+  constructor() {
+    this.find = '(.*)';
+    this.replace = '$1';
+    this.flags = undefined;
+  }
+}
+
+class VariableProperties {
+  constructor(regexMatch) {
+    this.regexMatch = regexMatch;
+    this.name = undefined;
+    /** @type {FindProperties[]} finds */
+    this.finds = [];
+    this.currentFind = undefined;
+  }
+  init() {
+    if (this.regexMatch[2] === undefined) { return; }
+    let properties = this.regexMatch[3].split(this.regexMatch[2]).map(s => s.trimStart());
+    let propIndex = this.getPropIndex(properties);
+    for (; propIndex < properties.length; propIndex++) {
+      const [key,...parts] = properties[propIndex].split('=');
+      const value = parts.length > 0 ? parts.join('=') : undefined;
+      if (key === 'name') { this.name = value; continue; }
+      if (key === 'find') {
+        this.createNewFind()
+        this.currentFind.find = value;
+        continue;
+      }
+      if (key === 'flags') {
+        this.createNewFindIfNotFound();
+        this.currentFind.flags = value;
+        continue;
+      }
+      if (key === 'replace') {
+        this.createNewFindIfNotFound();
+        this.currentFind.replace = value;
+        continue;
+      }
+      this.setProperty(key, value);
+    }
+  }
+  createNewFind() {
+    this.currentFind = new FindProperties();
+    this.finds.push(this.currentFind);
+  }
+  createNewFindIfNotFound() {
+    if (!this.currentFind) {
+      this.createNewFind()
+    }
+  }
+  /** @param {string} input */
+  transform(input) {
+    let result = input;
+    for (const find of this.finds) {
+      result = result.replace(new RegExp(find.find, find.flags), find.replace);
+    }
+    return result;
+  }
+  /** @param {string[]} properties @returns {number} */
+  getPropIndex(properties) { throw 'Not Implemented'; }
+  setProperty(key, value) {}
+}
+
+class VariableTransformProperties extends VariableProperties {
+  constructor(regexMatch) {
+    super(regexMatch);
+    this.init();
+  }
+  /** @param {string[]} properties @returns {number} */
+  getPropIndex(properties) { return 0; }
+}
+
+function transformVariable(data, variableValue, variableName) {
+  let regex = getVariableWithParamsRegex(variableName, 'g');
+  return data.replace(regex, (...regexMatch) => {
+    let props = new VariableTransformProperties(regexMatch);
+    return props.transform(variableValue);
+  });
+}
+
 function activate(context) {
   const openFile = (uri, lineNr, charPos, method, viewColumn) => {
     if (!htmlRelatedLinksProvider.enableLogging) {
@@ -265,10 +348,10 @@ function activate(context) {
         let fileBasename = path.basename(file);
         let fileExtname = path.extname(file);
         let fileBasenameNoExtension = fileBasename.substring(0, fileBasename.length-fileExtname.length);
-        uri = uri.replace('${fileDirname}', fileDirname);
-        uri = uri.replace('${fileBasename}', fileBasename);
-        uri = uri.replace('${fileBasenameNoExtension}', fileBasenameNoExtension);
-        uri = uri.replace('${fileExtname}', fileExtname);
+        uri = transformVariable(uri, fileDirname, 'fileDirname');
+        uri = transformVariable(uri, fileBasename, 'fileBasename');
+        uri = transformVariable(uri, fileBasenameNoExtension, 'fileBasenameNoExtension');
+        uri = transformVariable(uri, fileExtname, 'fileExtname');
       }
       if (uri.indexOf('${') >= 0) {  // workspace related variables
         const wsfolders = dblQuest(vscode.workspace.workspaceFolders, []);
@@ -288,15 +371,15 @@ function activate(context) {
         if (workspace) {
           workspaceFolder = workspace.uri.fsPath;
           let workspaceFolderBasename = path.basename(workspaceFolder);
-          uri = uri.replace('${workspaceFolder}', workspaceFolder);
-          uri = uri.replace('${workspaceFolderBasename}', workspaceFolderBasename);
+          uri = transformVariable(uri, workspaceFolder, 'workspaceFolder');
+          uri = transformVariable(uri, workspaceFolderBasename, 'workspaceFolderBasename');
         }
         if (editorWorkspace) {
           let relativeFile = file.substring(workspaceFolder.length+1);
           let relativeFileDirname = fileDirname.substring(workspaceFolder.length+1);
-          uri = uri.replace('${fileWorkspaceFolder}', workspaceFolder);
-          uri = uri.replace('${relativeFile}', relativeFile);
-          uri = uri.replace('${relativeFileDirname}', relativeFileDirname);
+          uri = transformVariable(uri, workspaceFolder, 'fileWorkspaceFolder');
+          uri = transformVariable(uri, relativeFile, 'relativeFile');
+          uri = transformVariable(uri, relativeFileDirname, 'relativeFileDirname');
         }
       }
     }
