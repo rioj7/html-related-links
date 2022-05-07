@@ -241,6 +241,7 @@ The variables allowed are:
 * <code>${workspaceFolder:<em>Name</em>}</code> : In Multi Root Workspaces use the workspace with the given <em>Name</em>
 * <code>${workspaceFolder:<em>/path/to/Name</em>}</code> : In Multi Root Workspaces use the workspace where the path ends with <em>/path/to/Name</em> in case multiple workspaces have the same <em>Name</em>
 * <code>${workspaceFolder:[<em>Number</em>]}</code> : Use workspace <em>Number</em> (0-based)
+* <code>${command:<em>name</em>}</code> : use the result of a command as a variable. `name` can be a commandID or a named argument object property, arguments are part of the [`command` property of the (parent) command](#variable-command)
 
 The line number and character position, they can be a number (`10`) or a string with a number (`"10"`).
 
@@ -303,6 +304,89 @@ Create the following keybindings:
 
 Based on the languageId of the current file we choose a different file extension.
 
+## Variable command
+
+With the variable <code>${command:<em>name</em>}</code> you can use the result of a command in the file path you want to open.
+
+`name` can be a commandID or a named argument object property
+
+### CommandID
+
+If the command does not use arguments you place the commandID directly in the variable.
+
+```
+  {
+    "key": "ctrl+i x",
+    "command": "htmlRelatedLinks.openFile",
+    "args": {
+      "file": "${command:extension.commandvariable.workspace.folderPosix}/${fileBasenameNoExtension}.ts",
+      "method": "vscode.open",
+      "viewColumn": "split"
+    }
+  }
+```
+
+Example might not be useful but it is to show the usecase.
+
+### Named Arguments
+
+If the command uses arguments you have to put these in the arguments of the parent command in the property `command`.
+
+The named arguments have the following properties:
+
+* `command` : the commandID to execute
+* `args` : the arguments for this commandID
+
+#### Example 1
+
+If you have a file `${workspaceFolder}/pointer.txt` that contains the path of a file you want to open you can use the command `extension.commandvariable.file.content` (extension [Command Variable](https://marketplace.visualstudio.com/items?itemName=rioj7.command-variable)) to read the content.
+
+```
+  {
+    "key": "ctrl+i x",
+    "command": "htmlRelatedLinks.openFile",
+    "args": {
+      "file": "${workspaceFolder}/${command:mypointer}.py",
+      "method": "vscode.open",
+      "viewColumn": "2",
+      "command": {
+        "mypointer": {
+          "command": "extension.commandvariable.file.content",
+          "args": {
+            "fileName": "${workspaceFolder}/pointer.txt"
+          }
+        }
+      }
+    }
+  }
+```
+
+`extension.commandvariable.file.content` can also read Key-Value files and JSON files.
+
+#### Example 2
+
+With `extension.commandvariable.pickStringRemember` you can add a pick list to determine the file to open
+
+```
+  {
+    "key": "ctrl+i x",
+    "command": "htmlRelatedLinks.openFile",
+    "args": {
+      "file": "${workspaceFolder}/${command:mypick}",
+      "method": "vscode.open",
+      "viewColumn": 2,
+      "command": {
+        "mypick": {
+          "command": "extension.commandvariable.pickStringRemember",
+          "args": {
+            "options": [ "path/to/A/foo.py", "path/to/Z/bar.py" ],
+            "description": "Choose a file"
+          }
+        }
+      }
+    }
+  }
+```
 
 ## `args` is an array
 
@@ -351,6 +435,9 @@ This is when using an array as argument or when `method` is `openShow`. I don't 
 The **Open File or Create File** icon (on the item context menu) uses the `vscode.open` method.
 
 # Release Notes
+
+### v0.17.0
+* `htmlRelatedLinks.openFile` has variable `${command}`
 
 ### v0.16.0
 * `htmlRelatedLinks.openFile` variables now have a (multiple) find/replace option

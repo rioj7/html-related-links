@@ -295,8 +295,33 @@ function transformVariable(data, variableValue, variableName) {
   });
 }
 
+async function command(args) {
+  let command = getProperty(args, 'command');
+  if (!command) { return 'Unknown'; }
+  return vscode.commands.executeCommand(command, getProperty(args, 'args'));
+}
+var asyncVariable = async (text, args, func) => {
+  let asyncArgs = [];
+  let varRE = new RegExp(`\\$\\{${func.name}:(.+?)\\}`, 'g');
+  text = text.replace(varRE, (m, p1) => {
+    let deflt = undefined;
+    if (func.name === 'command') { deflt = { command: p1 }; }
+    let nameArgs = getProperty(getProperty(args, func.name, {}), p1, deflt);
+    if (!nameArgs) { return 'Unknown'; }
+    asyncArgs.push(nameArgs);
+    return m;
+  });
+  for (let i = 0; i < asyncArgs.length; i++) {
+    asyncArgs[i] = await func(asyncArgs[i]);
+  }
+  text = text.replace(varRE, (m, p1) => {
+    return asyncArgs.shift();
+  });
+  return text;
+};
+
 function activate(context) {
-  const openFile = (uri, lineNr, charPos, method, viewColumn) => {
+  const openFile = async (uri, lineNr, charPos, method, viewColumn) => {
     if (!htmlRelatedLinksProvider.enableLogging) {
       var config = vscode.workspace.getConfiguration('html-related-links');
       htmlRelatedLinksProvider.enableLogging = config.get('enableLogging');
@@ -325,6 +350,7 @@ function activate(context) {
     if (viewColumn === 'split' && editor)  { viewColumn = editor.viewColumn === 1 ? 2 : 1; }
     viewColumn = Number(viewColumn); // in case it is a number string
     if (isString(uri) && (uri.indexOf('${') >= 0)) {
+      uri = await asyncVariable(uri, args, command);
       uri = uri.replace(/\$\{env:([^}]+)\}/, (m, p1) => {
         if (htmlRelatedLinksProvider.enableLogging) {
           console.log('Use environment variable:', p1);
@@ -425,10 +451,10 @@ function activate(context) {
   };
   const htmlRelatedLinksProvider = new HTMLRelatedLinksProvider();
   vscode.window.registerTreeDataProvider('htmlRelatedLinks', htmlRelatedLinksProvider);
-  context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.openFile', (uri, lineNr, charPos, method) => { openFile(uri, lineNr, charPos, method); }) );
+  context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.openFile', (uri, lineNr, charPos, method) => openFile(uri, lineNr, charPos, method) ) );
   context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.openURL', uriText => { vscode.env.openExternal(vscode.Uri.parse(uriText, true)); }) );
   context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.openURLGitAlias', () => { vscode.env.openExternal(vscode.Uri.parse('https://raw.githubusercontent.com/GitAlias/gitalias/master/gitalias.txt', true)); }) );
-  context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.createFile', relatedLink => { openFile(...relatedLink.command.arguments, 'vscode.open'); }) );
+  context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.createFile', relatedLink => openFile(...relatedLink.command.arguments, 'vscode.open') ) );
   context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.fileLock', () => { setLockEditor(vscode.window.activeTextEditor); }) );
   context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.fileUnlock', () => { setLockEditor(undefined); }) );
   vscode.window.onDidChangeTextEditorSelection(
