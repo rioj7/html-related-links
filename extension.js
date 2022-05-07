@@ -323,6 +323,7 @@ function activate(context) {
     if (viewColumn === 'beside') { viewColumn = vscode.ViewColumn.Beside; }
     let editor = vscode.window.activeTextEditor;
     if (viewColumn === 'split' && editor)  { viewColumn = editor.viewColumn === 1 ? 2 : 1; }
+    viewColumn = Number(viewColumn); // in case it is a number string
     if (isString(uri) && (uri.indexOf('${') >= 0)) {
       uri = uri.replace(/\$\{env:([^}]+)\}/, (m, p1) => {
         if (htmlRelatedLinksProvider.enableLogging) {
