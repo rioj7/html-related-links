@@ -433,23 +433,3 @@ You will get an error message: `Files above 50MB cannot be synchronized with ext
 This is when using an array as argument or when `method` is `openShow`. I don't know if we have this problem when `method` is `vscode.open`.
 
 The **Open File or Create File** icon (on the item context menu) uses the `vscode.open` method.
-
-# Release Notes
-
-### v0.17.0
-* `htmlRelatedLinks.openFile` has variable `${command}`
-
-### v0.16.0
-* `htmlRelatedLinks.openFile` variables now have a (multiple) find/replace option
-
-### v0.15.0
-* `htmlRelatedLinks.openFile` set the scheme to use.
-
-### v0.14.2
-* `html-related-links.showIfHTML` to disable view even for HTML files, if only use the openFile command
-
-### v0.14.1
-* `htmlRelatedLinks.openURLGitAlias` open a git alias page on github
-
-### v0.14.0
-* `htmlRelatedLinks.openURL` same functionality as Cltl-Link-Click but from a keybinding
