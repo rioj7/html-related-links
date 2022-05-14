@@ -8,61 +8,118 @@ const isArray = obj => Array.isArray(obj);
 const isUri = obj => isObject(obj) && obj.hasOwnProperty('scheme');
 const convert = (value, func) => { return value !== undefined ? func(value) : value; }
 const convertToNumber = value => convert(value, n => Number(n));
+const getCaptureGroupNr = txt => {
+  let result = txt.match(/\$(\d+)/);
+  if (result == null) { return undefined; }
+  return Number(result[1]);
+};
 
 class HTMLRelatedLinksProvider {
   constructor() {
     this.editor = undefined;
     this._onDidChangeTreeData = new vscode.EventEmitter();
     this.onDidChangeTreeData = this._onDidChangeTreeData.event;
-    this.include = {};
-    this.lockEditorPath = undefined;
+    this.paths = new RelatedPaths(undefined);
+    this.lockDocumentPath = undefined;
     this.content = undefined;
-    this.enableLogging = undefined;
+    this.removePathRE = new RegExp('.*?[\\\\/](?=[^\\\\/]+$)(.*)');
   }
   refresh() {
     this._onDidChangeTreeData.fire(0);
   }
-  setEditor(editor, reason) {
-    this.editor = editor;
+  setPaths(paths) {
+    this.paths = paths;
     if (this.needsRefresh()) { this.refresh(); }
   }
-  isFileHTML() {
-    return this.editor && this.editor.document.languageId === 'html';
-  }
   isLocked() {
-    return !!this.lockEditorPath;
+    return !!this.lockDocumentPath;
   }
-  isLockedEditor() {
-    return this.editor.document.uri.fsPath === this.lockEditorPath;
+  isLockedDocument() {
+    return this.paths.documentPath === this.lockDocumentPath;
   }
   needsRefresh() {
-    if (this.isLocked()) { return this.isLockedEditor(); }
+    if (this.isLocked()) { return this.isLockedDocument(); }
     return true;
   }
   setLockEditor(editor) {
-    this.lockEditorPath = editor ? editor.document.uri.fsPath : undefined;
-    if (this.editor) this.setEditor(this.editor, 'Lock');  // refresh if needed
+    this.lockDocumentPath = editor ? editor.document.uri.fsPath : undefined;
+    this.setPaths(this.paths);  // refresh if needed
   }
   getTreeItem(element) {
     return element;
   }
   getChildren(element) {
-    if (!this.editor) return Promise.resolve([]);
+    if (!this.paths.documentPath) return Promise.resolve([]);
     // when tabs are chanegd we get multiple 'ChangeTextEditorSelection' events.
     // check for current editor
-    if (this.isLocked() && !this.isLockedEditor()) {
+    if (this.isLocked() && !this.isLockedDocument()) {
       return Promise.resolve( this.content || [] );
     }
-    var document = this.editor.document;
+    let removePathFromLabel = this.paths.removePathFromLabel;
+    var links = new Map();
+    for (const {linkPath, lineNr, charPos, filePos, filePath} of this.paths.paths) {
+      let label = undefined;
+      let compareStr = linkPath;
+      if (lineNr !== undefined) {
+        label = `${filePath}`;
+        compareStr = label;
+        let addNumber = x => {
+          if (!x) return x;
+          label += `:${x}`;
+          compareStr += `:${String(x).padStart(7, '0')}`;
+          return x;
+        };
+        addNumber(lineNr);
+        addNumber(charPos);
+      }
+      let key = label || linkPath;
+      if (!links.has(key) || (filePos < links.get(key).filePos)) {
+        if (label && removePathFromLabel) {
+          label = label.replace(this.removePathRE, '$1');
+        }
+        links.set(key, {linkPath, lineNr, charPos, label, compareStr, filePos});
+      }
+    }
+    var linksAr = Array.from(links.values());
+    let collator = Intl.Collator().compare;
+    let compareFunc = this.paths.sortByPosition ? (a,b) => a.filePos - b.filePos : (a,b) => collator(a.compareStr, b.compareStr);
+    this.content = linksAr.sort( compareFunc ).map(x => new RelatedLink(x));
+    // this.content.push(new vscode.TreeItem({label:'Blablablablabla', highlights:[[0,5],[8,12]]}));
+    return Promise.resolve(this.content);
+  }
+}
+class RelatedLink extends vscode.TreeItem {
+  constructor(linkObj) {
+    super(vscode.Uri.file(linkObj.linkPath));
+    this.command = { command: "htmlRelatedLinks.openFile", arguments: [this.resourceUri, linkObj.lineNr, linkObj.charPos], title: '' };
+    this.iconPath = vscode.ThemeIcon.File;
+    this.description = true; // use resource URI
+    this.label = linkObj.label; // use label when set
+    this.contextValue = 'relatedFile'; // used for menu entries
+  }
+  get tooltip() {
+    return `${this.resourceUri.fsPath}`;
+  }
+}
+class RelatedPaths {
+  /** @param {vscode.TextDocument} document */
+  constructor(document) {
+    this.sortByPosition = undefined;
+    this.removePathFromLabel = undefined;
+    this.include = {};
+    this.paths = [];
+    this.documentPath = document ? document.uri.fsPath : null;
+    if (document) { this.getPaths(document); }
+  }
+  /** @param {vscode.TextDocument} document */
+  getPaths(document) {
     var workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
     var config = vscode.workspace.getConfiguration('html-related-links', workspaceFolder ? workspaceFolder.uri : null);
-    this.enableLogging = config.get('enableLogging');
     var includeConfig = config.get('include');
     var exclude = config.get('exclude');
     var fileroot = config.get('fileroot');
-    var sortByPosition = config.get('sortByPosition');
-    var removePathFromLabel = config.get('removePathFromLabel');
-    var removePathRE = new RegExp('.*?[\\\\/](?=[^\\\\/]+$)(.*)');
+    this.sortByPosition = config.get('sortByPosition');
+    this.removePathFromLabel = config.get('removePathFromLabel');
 
     var ownfilePath = document.uri.fsPath;
     var docFolder = path.dirname(ownfilePath);
@@ -77,80 +134,71 @@ class HTMLRelatedLinksProvider {
         }
       }
     }
+    let asDoclink = true;
     this.include = {};
     if (isArray(includeConfig)) {
       if (includeConfig.length > 0) {
-        this.updateInclude('all', includeConfig);
+        this.updateInclude('all', includeConfig, asDoclink);
       }
     } else {
       if (isObject(includeConfig)) {
         for (const languageId in includeConfig) {
           if (!includeConfig.hasOwnProperty(languageId)) { continue; }
           if (!(document.languageId === languageId || languageId === 'all')) { continue; }
-          this.updateInclude(languageId, includeConfig[languageId]);
+          this.updateInclude(languageId, includeConfig[languageId], asDoclink);
         }
       }
     }
     if (document.languageId === 'html') {
-      this.updateInclude(document.languageId, ["<(?:a|img|link|script)[^>]*? (?:src|href)=[\'\"]((?!\\/\\/|[^:>\'\"]*:)[^#?>\'\"]*)(?:[^>\'\"]*)[\'\"][^>]*>"]);
+      this.updateInclude(document.languageId, [`<(?:a|img|link|script)[^>]*? (?:src|href)=['"]((?!//|[^:>'"]*:)[^#?>'"]*)(?:[^>'"]*)['"][^>]*>`], !asDoclink);
     }
     var docText = document.getText();
-    var links = new Map();
+    this.paths = [];
     for (const languageId in this.include) {
       if (!this.include.hasOwnProperty(languageId)) { continue; }
-      // if (!(document.languageId === languageId || languageId === 'all')) { continue; }
       for (const includeObj of this.include[languageId]) {
         let linkRE = new RegExp(includeObj.find, "gmi");
-        let replaceRE = new RegExp(includeObj.find, "mi"); // needs to be a copy, replace resets property lastIndex
+        let replaceRE = new RegExp(includeObj.find, "mi"); // needs to be a copy, replace() resets property lastIndex
         let result;
         while ((result = linkRE.exec(docText)) != null) {
           if (result.length < 2) continue; // no matching group defined
-          let r1 = result[0].replace(replaceRE, includeObj.filePath);
-          if (r1==='/') r1 = '/__root__';
-          if (r1.length === 0) { continue; }
-          let linkPath = r1;
+          let filePath = result[0].replace(replaceRE, includeObj.filePath);
+          if (filePath.length === 0) { continue; }
+          if (filePath==='/') filePath = '/__root__';
+          let linkPath = filePath;
           if (!includeObj.isAbsolutePath) {
-            linkPath = path.join(r1.startsWith('/') ? filerootFolder : docFolder, r1);
+            linkPath = path.join(filePath.startsWith('/') ? filerootFolder : docFolder, filePath.startsWith('/') ? filePath.substring(1) : filePath);
           }
           if (linkPath === ownfilePath) { continue; }
-          let lineNr = undefined;
-          let charPos = undefined;
-          let label = undefined;
-          let compareStr = linkPath;
-          if (includeObj.lineNr) {
-            label = `${r1}`;
-            compareStr = label;
-            let addNumber = x => {
-              if (!x) return x;
-              x = result[0].replace(replaceRE, x);
-              label += `:${x}`;
-              x = Number(x);
-              compareStr += `:${String(x).padStart(7, '0')}`;
-              return x;
-            };
-            lineNr = addNumber(includeObj.lineNr);
-            charPos = addNumber(includeObj.charPos);
-          }
-          let key = label || linkPath;
           let filePos = result.index;
-          if (!links.has(key) || (filePos < links.get(key).filePos)) {
-            if (label && removePathFromLabel) {
-              label = label.replace(removePathRE, '$1');
+          let filePosEnd = linkRE.lastIndex;
+          let fullRange = new vscode.Range(document.positionAt(filePos), document.positionAt(filePosEnd));
+          if (this.paths.some( p => fullRange.intersection(p.fullRange) !== undefined )) { continue; }  // regex matching biggest text ranges should be specified first
+          let adjustRange = txt => {
+            filePos += result[0].indexOf(txt);
+            filePosEnd = filePos + txt.length;
+          };
+          if (includeObj.rangeGroup) {
+            let groupNr = getCaptureGroupNr(includeObj.rangeGroup);
+            if (groupNr !== undefined && groupNr < result.length) {
+              adjustRange(result[groupNr]);
             }
-            links.set(key, {linkPath, lineNr, charPos, label, compareStr, filePos});
           }
+          let pathRange = new vscode.Range(document.positionAt(filePos), document.positionAt(filePosEnd));
+          let getNumber = x => {
+            if (!x) return x;
+            return Number(result[0].replace(replaceRE, x));
+          };
+          let lineNr  = getNumber(includeObj.lineNr);
+          let charPos = getNumber(includeObj.charPos);
+          this.paths.push( {linkPath, lineNr, charPos, filePos, filePath, pathRange, fullRange, docLink: includeObj.docLink} );
         }
       }
     }
     var excludeRE = exclude.map(re => new RegExp(re, "mi"));
-    var linksAr = Array.from(links.values()).filter(x => !excludeRE.some(r => x.linkPath.match(r) != null));
-    let collator = Intl.Collator().compare;
-    let compareFunc = sortByPosition ? (a,b) => a.filePos - b.filePos : (a,b) => collator(a.compareStr, b.compareStr);
-    this.content = linksAr.sort( compareFunc ).map(x => new RelatedLink(x));
-    // this.content.push(new vscode.TreeItem({label:'Blablablablabla', highlights:[[0,5],[8,12]]}));
-    return Promise.resolve(this.content);
+    this.paths = this.paths.filter(x => !excludeRE.some( r => r.test(x.linkPath) ));
   }
-  updateInclude(languageId, list) {
+  updateInclude(languageId, list, asDoclink) {
     if (!isArray(list)) { return; }
     if (getProperty(this.include, languageId) === undefined) {
       this.include[languageId] = [];
@@ -166,23 +214,25 @@ class HTMLRelatedLinksProvider {
       let isAbsolutePath = getProperty(listItem, 'isAbsolutePath');
       let lineNr = getProperty(listItem, 'lineNr');
       let charPos = getProperty(listItem, 'charPos');
+      let rangeGroup = getProperty(listItem, 'rangeGroup');
+      if (!rangeGroup && !lineNr) {
+        let groupNr = getCaptureGroupNr(filePath);
+        if (groupNr !== undefined) {
+          rangeGroup = '$' + groupNr.toString();
+        }
+      }
       if (isString(find)) {
-        includeLanguageArr.push( {find, filePath, lineNr, charPos, isAbsolutePath} );
+        includeLanguageArr.push( {find, filePath, lineNr, charPos, isAbsolutePath, docLink: asDoclink, rangeGroup} );
       }
     }
   }
 }
-class RelatedLink extends vscode.TreeItem {
+class MyDocumentLink extends vscode.DocumentLink {
   constructor(linkObj) {
-    super(vscode.Uri.file(linkObj.linkPath));
-    this.command = { command: "htmlRelatedLinks.openFile", arguments: [this.resourceUri, linkObj.lineNr, linkObj.charPos], title: '' };
-    this.iconPath = vscode.ThemeIcon.File;
-    this.description = true; // use resource URI
-    this.label = linkObj.label; // use label when set
-    this.contextValue = 'relatedFile'; // used for menu entries
-  }
-  get tooltip() {
-    return `${this.resourceUri.fsPath}`;
+    super(linkObj.pathRange);
+    this.linkPath = linkObj.linkPath;
+    this.lineNr = linkObj.lineNr;
+    this.charPos = linkObj.charPos;
   }
 }
 
@@ -322,10 +372,7 @@ var asyncVariable = async (text, args, func) => {
 
 function activate(context) {
   const openFile = async (uri, lineNr, charPos, method, viewColumn) => {
-    if (!htmlRelatedLinksProvider.enableLogging) {
-      var config = vscode.workspace.getConfiguration('html-related-links');
-      htmlRelatedLinksProvider.enableLogging = config.get('enableLogging');
-    }
+    let enableLogging = vscode.workspace.getConfiguration('html-related-links').get('enableLogging');
     let args = uri;
     let scheme = undefined;
     if (isObject(args) && !isUri(args)) {
@@ -352,7 +399,7 @@ function activate(context) {
     if (isString(uri) && (uri.indexOf('${') >= 0)) {
       uri = await asyncVariable(uri, args, command);
       uri = uri.replace(/\$\{env:([^}]+)\}/, (m, p1) => {
-        if (htmlRelatedLinksProvider.enableLogging) {
+        if (enableLogging) {
           console.log('Use environment variable:', p1);
         }
         return getProperty(process.env, p1, 'Unknown');
@@ -416,7 +463,7 @@ function activate(context) {
     if (scheme) {
       uri = uri.with({scheme});
     }
-    if (htmlRelatedLinksProvider.enableLogging) {
+    if (enableLogging) {
       console.log('URI', JSON.stringify(uri.toJSON()));
       console.log('URI', uri.toString());
       console.log('Clicked on:', uri.fsPath);
@@ -436,9 +483,9 @@ function activate(context) {
     }
 
     vscode.workspace.openTextDocument(uri).then(document => {
-        if (htmlRelatedLinksProvider.enableLogging) { console.log('Document opened:', uri.fsPath); }
+        if (enableLogging) { console.log('Document opened:', uri.fsPath); }
         vscode.window.showTextDocument(document, vscode.ViewColumn.Active, false).then( editor => {
-          if (htmlRelatedLinksProvider.enableLogging) { console.log('Editor opened:', uri.fsPath); }
+          if (enableLogging) { console.log('Editor opened:', uri.fsPath); }
           revealPosition(editor, lineNr, charPos);
         });
       },
@@ -457,15 +504,34 @@ function activate(context) {
   context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.createFile', relatedLink => openFile(...relatedLink.command.arguments, 'vscode.open') ) );
   context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.fileLock', () => { setLockEditor(vscode.window.activeTextEditor); }) );
   context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.fileUnlock', () => { setLockEditor(undefined); }) );
-  vscode.window.onDidChangeTextEditorSelection(
-    (changeEvent) => { htmlRelatedLinksProvider.setEditor(changeEvent.textEditor, 'Changed'); },
-    null, context.subscriptions);
-  const onChangeActiveTextEditor = () => {
-    htmlRelatedLinksProvider.setEditor(vscode.window.activeTextEditor, 'Active');
-    vscode.commands.executeCommand('setContext', 'htmlRelatedLinks:fileIsHTML', htmlRelatedLinksProvider.isFileHTML());
+  const onChangeActiveTextEditor = async (editor) => {
+    vscode.commands.executeCommand('setContext', 'htmlRelatedLinks:fileIsHTML', editor && editor.document.languageId === 'html');
+    if (editor) {
+      await vscode.commands.executeCommand('vscode.executeLinkProvider', editor.document.uri);
+    }
   };
   vscode.window.onDidChangeActiveTextEditor(onChangeActiveTextEditor, null, context.subscriptions);
-  onChangeActiveTextEditor();
+  onChangeActiveTextEditor(vscode.window.activeTextEditor);
+  context.subscriptions.push(vscode.languages.registerDocumentLinkProvider({scheme: 'file'}, {
+    provideDocumentLinks: document => {
+      let relatedPaths = new RelatedPaths(document);
+      if (vscode.window.activeTextEditor.document.uri.fsPath === document.uri.fsPath) {
+        htmlRelatedLinksProvider.setPaths(relatedPaths);
+      }
+      return relatedPaths.paths.filter( p => p.docLink ).map( p => new MyDocumentLink(p) );
+    },
+    /** @param {MyDocumentLink} link */
+    resolveDocumentLink: async (link, token) => {
+      let uri = vscode.Uri.file(link.linkPath);
+      if (link.lineNr) {
+        await openFile(uri, link.lineNr, link.charPos, 'vscode.open');
+        vscode.window.showInformationMessage('You can ignore message: "Failed to open". See known issues.');
+        return null;  // we open the link ourself
+      }
+      link.target = uri;
+      return link;
+    }
+  }));
 };
 
 function deactivate() {}

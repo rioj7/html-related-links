@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.18.0] 2022-05-10
+### Added
+- Make related files `Ctrl+click` (Follow link)
+- `rangeGroup` can be used to specify the capture group to use for `Ctrl+click` (Follow link)
+### Fixed
+- Only update **Related Links** view when content has not changed for a short period
+
 ## [0.17.0] 2022-05-07
 ### Added
 - `htmlRelatedLinks.openFile` has variable `${command}`
