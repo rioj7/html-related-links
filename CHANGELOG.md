@@ -1,6 +1,10 @@
 # Change Log
 
-## [0.18.0] 2022-05-10
+## [0.18.1] 2022-05-17
+### Fixed
+- Error message when `Ctrl+click` a link with `lineNr`
+
+## [0.18.0] 2022-05-14
 ### Added
 - Make related files `Ctrl+click` (Follow link)
 - `rangeGroup` can be used to specify the capture group to use for `Ctrl+click` (Follow link)

@@ -14,12 +14,6 @@ The tags handled for HTML files are: `a`, `img`, `link`, `script`.
 
 It needs a [command to open a file](#open-a-file) and also makes it available to be called from a key binding or in a [multi-command](https://marketplace.visualstudio.com/items?itemName=ryuta46.multi-command) sequence.
 
-## Known Issues
-
-### Error message:  **`Failed to open this link because its target is missing.`**
-
-If you specify a related file with a line/character position and you use the mouse with <kbd>Ctrl</kbd>+Click (Follow link) the file will be opened at the specified position but you also get an error message. The reason is that the `DocumentLink` in the VSC API does not allow to specify a line/character position. We trick VSC by telling it that we will supply the target when the user clicks on the DocumentLink. We don't supply the target, but as a side effect we open the file ourselfs. The error message will disappear after a few seconds.
-
 ## Lock view to a file
 
 Sometimes you want to fix the view to the content of a particular file. You can do this with the **`Lock to file`** button ![lock](images/unlock.png) in the title bar of the view.

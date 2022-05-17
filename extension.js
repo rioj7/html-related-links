@@ -507,7 +507,7 @@ function activate(context) {
   const onChangeActiveTextEditor = async (editor) => {
     vscode.commands.executeCommand('setContext', 'htmlRelatedLinks:fileIsHTML', editor && editor.document.languageId === 'html');
     if (editor) {
-      await vscode.commands.executeCommand('vscode.executeLinkProvider', editor.document.uri);
+      htmlRelatedLinksProvider.setPaths(new RelatedPaths(editor.document));
     }
   };
   vscode.window.onDidChangeActiveTextEditor(onChangeActiveTextEditor, null, context.subscriptions);
@@ -515,7 +515,8 @@ function activate(context) {
   context.subscriptions.push(vscode.languages.registerDocumentLinkProvider({scheme: 'file'}, {
     provideDocumentLinks: document => {
       let relatedPaths = new RelatedPaths(document);
-      if (vscode.window.activeTextEditor.document.uri.fsPath === document.uri.fsPath) {
+      let editor = vscode.window.activeTextEditor;
+      if (editor && (editor.document.uri.fsPath === document.uri.fsPath) ) {
         htmlRelatedLinksProvider.setPaths(relatedPaths);
       }
       return relatedPaths.paths.filter( p => p.docLink ).map( p => new MyDocumentLink(p) );
@@ -524,9 +525,10 @@ function activate(context) {
     resolveDocumentLink: async (link, token) => {
       let uri = vscode.Uri.file(link.linkPath);
       if (link.lineNr) {
-        await openFile(uri, link.lineNr, link.charPos, 'vscode.open');
-        vscode.window.showInformationMessage('You can ignore message: "Failed to open". See known issues.');
-        return null;  // we open the link ourself
+        // https://github.com/microsoft/vscode/issues/149523
+        let fragment = `L${link.lineNr}`
+        if (link.charPos) { fragment += `,${link.charPos}` }
+        uri = uri.with({fragment});
       }
       link.target = uri;
       return link;
