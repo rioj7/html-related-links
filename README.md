@@ -76,7 +76,7 @@ Then you should specify the regex that matches the most text first. See Example 
 
 You want to find files referenced in PHP `require` statements. Add the following 2 regular expressions in `settings.json` :
 
-```
+```json
   "html-related-links.include": {
     "php": [
       "require\\('([^']+)'\\);",
@@ -91,7 +91,7 @@ At the moment it is not possible to limit the search to particular parts of the 
 
 If you also have a number of JavaScript files that use `import` statements and some of the file paths are relative paths you can add this to your `settings.json` :
 
-```
+```json
   "html-related-links.include": {
     "php": [
       "require\\('([^']+)'\\);",
@@ -122,7 +122,7 @@ To match related files like the following in Plaintext file:
 
 Use the following setting:
 
-```
+```json
   "html-related-links.include": {
     "plaintext": [
       {
@@ -166,7 +166,7 @@ or
 
 In `settings.json` it will look like
 
-```
+```json
   "html-related-links.exclude": [
     "[\\\\/]foo[\\\\/]"
   ]
@@ -174,7 +174,7 @@ In `settings.json` it will look like
 
 or
 
-```
+```json
   "html-related-links.exclude": [
     "([\\\\/])foo\\1"
   ]
@@ -190,7 +190,7 @@ Add the following regular expression in the Settings UI:
 
 In `settings.json` it will look like
 
-```
+```json
   "html-related-links.exclude": [
     "([\\\\/])(?=[^\\\\/]+$).*bar"
   ]
@@ -229,7 +229,7 @@ If you have the following directory structure
 
 and you have opened `/home/myname/WebProjects` as a folder or part of a Multi Root Workspace you add this setting to the file `/home/myname/WebProjects/.vscode/settings.json`:
 
-```
+```json
   "html-related-links.fileroot": [
     "work/siteFoo",
     "siteBar"
@@ -328,7 +328,7 @@ You can define as many `[0...)` find-replace transforms as you like.
 
 Create the following keybindings:
 
-```
+```json
   {
     "key": "ctrl+i r",
     "command": "htmlRelatedLinks.openFile",
@@ -363,7 +363,7 @@ With the variable <code>${command:<em>name</em>}</code> you can use the result o
 
 If the command does not use arguments you place the commandID directly in the variable.
 
-```
+```json
   {
     "key": "ctrl+i x",
     "command": "htmlRelatedLinks.openFile",
@@ -390,7 +390,7 @@ The named arguments have the following properties:
 
 If you have a file `${workspaceFolder}/pointer.txt` that contains the path of a file you want to open you can use the command `extension.commandvariable.file.content` (extension [Command Variable](https://marketplace.visualstudio.com/items?itemName=rioj7.command-variable)) to read the content.
 
-```
+```json
   {
     "key": "ctrl+i x",
     "command": "htmlRelatedLinks.openFile",
@@ -416,7 +416,7 @@ If you have a file `${workspaceFolder}/pointer.txt` that contains the path of a 
 
 With `extension.commandvariable.pickStringRemember` you can add a pick list to determine the file to open
 
-```
+```json
   {
     "key": "ctrl+i x",
     "command": "htmlRelatedLinks.openFile",
@@ -445,7 +445,7 @@ The `args` part can be an array with 1 to 3 elements:
 1. The line number you want to place the cursor (default: previous visited line)
 1. The character position on the line you want to place the cursor, only used if line number present (default: 1 or previous character position)
 
-```
+```json
   {
     "key": "ctrl+i ctrl+o",  // or any other key binding
     "command": "htmlRelatedLinks.openFile",
