@@ -13,6 +13,16 @@ const getCaptureGroupNr = txt => {
   if (result == null) { return undefined; }
   return Number(result[1]);
 };
+function getExpressionFunction(expr) {
+  try {
+    return Function(`"use strict";return (function calcexpr(position) {
+      return ${expr};
+    })`)();
+  }
+  catch (ex) {
+    vscode.window.showErrorMessage("html-related-links: Incomplete expression");
+  }
+}
 
 class HTMLRelatedLinksProvider {
   constructor() {
@@ -57,10 +67,9 @@ class HTMLRelatedLinksProvider {
     }
     let removePathFromLabel = this.paths.removePathFromLabel;
     var links = new Map();
-    for (const {linkPath, lineNr, charPos, filePos, filePath} of this.paths.paths) {
-      let label = undefined;
+    for (let {linkPath, lineNr, charPos, filePos, filePath, label, isCurrentFile} of this.paths.paths) {
       let compareStr = linkPath;
-      if (lineNr !== undefined) {
+      if (label === undefined && lineNr !== undefined) {
         label = `${filePath}`;
         compareStr = label;
         let addNumber = x => {
@@ -77,7 +86,7 @@ class HTMLRelatedLinksProvider {
         if (label && removePathFromLabel) {
           label = label.replace(this.removePathRE, '$1');
         }
-        links.set(key, {linkPath, lineNr, charPos, label, compareStr, filePos});
+        links.set(key, {linkPath, lineNr, charPos, label, compareStr, filePos, isCurrentFile});
       }
     }
     var linksAr = Array.from(links.values());
@@ -93,9 +102,9 @@ class RelatedLink extends vscode.TreeItem {
     super(vscode.Uri.file(linkObj.linkPath));
     this.command = { command: "htmlRelatedLinks.openFile", arguments: [this.resourceUri, linkObj.lineNr, linkObj.charPos], title: '' };
     this.iconPath = vscode.ThemeIcon.File;
-    this.description = true; // use resource URI
+    this.description = !linkObj.isCurrentFile; // use resource URI if other file
     this.label = linkObj.label; // use label when set
-    this.contextValue = 'relatedFile'; // used for menu entries
+    this.contextValue = linkObj.isCurrentFile ? undefined : 'relatedFile'; // used for menu entries
   }
   // @ts-ignore
   get tooltip() {
@@ -164,15 +173,22 @@ class RelatedPaths {
         while ((result = linkRE.exec(docText)) != null) {
           if (result.length < 2) continue; // no matching group defined
           let filePath = result[0].replace(replaceRE, includeObj.filePath);
+          filePath = variableSubstitution(filePath, null, document, false);
           if (filePath.length === 0) { continue; }
           if (filePath==='/') filePath = '/__root__';
           let linkPath = filePath;
           if (!includeObj.isAbsolutePath) {
             linkPath = path.join(filePath.startsWith('/') ? filerootFolder : docFolder, filePath.startsWith('/') ? filePath.substring(1) : filePath);
           }
-          if (linkPath === ownfilePath) { continue; }
+          let isCurrentFile = linkPath === ownfilePath;
+          if (!includeObj.allowCurrentFile && isCurrentFile) { continue; }
           let filePos = result.index;
           let filePosEnd = linkRE.lastIndex;
+          var offset2DisplayPosition = offset => {
+            let position = document.positionAt(offset);
+            return {line: position.line+1, character: position.character+1};
+          };
+          let position = {start: offset2DisplayPosition(filePos), end: offset2DisplayPosition(filePosEnd)};
           let fullRange = new vscode.Range(document.positionAt(filePos), document.positionAt(filePosEnd));
           if (this.paths.some( p => fullRange.intersection(p.fullRange) !== undefined )) { continue; }  // regex matching biggest text ranges should be specified first
           let adjustRange = txt => {
@@ -188,11 +204,14 @@ class RelatedPaths {
           let pathRange = new vscode.Range(document.positionAt(filePos), document.positionAt(filePosEnd));
           let getNumber = x => {
             if (!x) return x;
-            return Number(result[0].replace(replaceRE, x));
+            x = result[0].replace(replaceRE, x);
+            return Number(getExpressionFunction(x)(position));
           };
           let lineNr  = getNumber(includeObj.lineNr);
           let charPos = getNumber(includeObj.charPos);
-          this.paths.push( {linkPath, lineNr, charPos, filePos, filePath, pathRange, fullRange, docLink: includeObj.docLink} );
+          let label  = includeObj.label;
+          if (label) { label = result[0].replace(replaceRE, label); }
+          this.paths.push( {linkPath, lineNr, charPos, filePos, filePath, pathRange, fullRange, docLink: includeObj.docLink, label, isCurrentFile} );
         }
       }
     }
@@ -215,6 +234,8 @@ class RelatedPaths {
       let isAbsolutePath = getProperty(listItem, 'isAbsolutePath');
       let lineNr = getProperty(listItem, 'lineNr');
       let charPos = getProperty(listItem, 'charPos');
+      let label = getProperty(listItem, 'label');
+      let allowCurrentFile = getProperty(listItem, 'allowCurrentFile');
       let rangeGroup = getProperty(listItem, 'rangeGroup');
       if (!rangeGroup && !lineNr) {
         let groupNr = getCaptureGroupNr(filePath);
@@ -223,7 +244,7 @@ class RelatedPaths {
         }
       }
       if (isString(find)) {
-        includeLanguageArr.push( {find, filePath, lineNr, charPos, isAbsolutePath, docLink: asDoclink, rangeGroup} );
+        includeLanguageArr.push( {find, filePath, lineNr, charPos, isAbsolutePath, docLink: asDoclink, rangeGroup, label, allowCurrentFile} );
       }
     }
   }
@@ -370,7 +391,73 @@ var asyncVariable = async (text, args, func) => {
   });
   return text;
 };
+/** @param {string} text @param {object} args @param {vscode.TextDocument} document @param {boolean} enableLogging */
+var variableSubstitutionAsync = async (text, args, document, enableLogging) => {
+  text = await asyncVariable(text, args, command);
+  return text;
+};
+/** @param {string} text @param {object} args @param {vscode.TextDocument} document @param {boolean} enableLogging */
+var variableSubstitution = (text, args, document, enableLogging) => {
+  text = text.replace(/\$\{env:([^}]+)\}/, (m, p1) => {
+    if (enableLogging) {
+      console.log('Use environment variable:', p1);
+    }
+    return getProperty(process.env, p1, 'Unknown');
+  } );
+  text = text.replace(/\$\{workspaceFolder:(.+?)\}/, (m, p1) => {
+    let wsf = getNamedWorkspaceFolder(p1);
+    if (!wsf) { return 'Unknown'; }
+    return wsf.uri.fsPath;
+  });
+  let workspace = undefined;
+  let documentWorkspace = undefined;
+  let file = undefined;
+  let fileDirname = undefined;
+  let workspaceFolder = undefined;
 
+  if (document) {
+    documentWorkspace = vscode.workspace.getWorkspaceFolder(document.uri);
+    file = document.fileName;
+    fileDirname = path.dirname(file);
+    let fileBasename = path.basename(file);
+    let fileExtname = path.extname(file);
+    let fileBasenameNoExtension = fileBasename.substring(0, fileBasename.length-fileExtname.length);
+    text = transformVariable(text, fileDirname, 'fileDirname');
+    text = transformVariable(text, fileBasename, 'fileBasename');
+    text = transformVariable(text, fileBasenameNoExtension, 'fileBasenameNoExtension');
+    text = transformVariable(text, fileExtname, 'fileExtname');
+  }
+  if (text.indexOf('${') >= 0) {  // workspace related variables
+    const wsfolders = dblQuest(vscode.workspace.workspaceFolders, []);
+    if (wsfolders.length === 0) {
+      vscode.window.showErrorMessage('No Workspace');
+      return;
+    }
+    if (wsfolders.length === 1) {
+      workspace = wsfolders[0];
+    } else {
+      workspace = documentWorkspace;
+      if (!workspace) {
+        vscode.window.showErrorMessage('Use named Workspace');
+        return;
+      }
+    }
+    if (workspace) {
+      workspaceFolder = workspace.uri.fsPath;
+      let workspaceFolderBasename = path.basename(workspaceFolder);
+      text = transformVariable(text, workspaceFolder, 'workspaceFolder');
+      text = transformVariable(text, workspaceFolderBasename, 'workspaceFolderBasename');
+    }
+    if (documentWorkspace) {
+      let relativeFile = file.substring(workspaceFolder.length+1);
+      let relativeFileDirname = fileDirname.substring(workspaceFolder.length+1);
+      text = transformVariable(text, workspaceFolder, 'fileWorkspaceFolder');
+      text = transformVariable(text, relativeFile, 'relativeFile');
+      text = transformVariable(text, relativeFileDirname, 'relativeFileDirname');
+    }
+  }
+  return text;
+};
 function activate(context) {
   const openFile = async (uri, lineNr, charPos, method, viewColumn) => {
     let enableLogging = vscode.workspace.getConfiguration('html-related-links').get('enableLogging');
@@ -397,66 +484,10 @@ function activate(context) {
     let editor = vscode.window.activeTextEditor;
     if (viewColumn === 'split' && editor)  { viewColumn = editor.viewColumn === 1 ? 2 : 1; }
     viewColumn = Number(viewColumn); // in case it is a number string
+    let document = editor ? editor.document : undefined;
     if (isString(uri) && (uri.indexOf('${') >= 0)) {
-      uri = await asyncVariable(uri, args, command);
-      uri = uri.replace(/\$\{env:([^}]+)\}/, (m, p1) => {
-        if (enableLogging) {
-          console.log('Use environment variable:', p1);
-        }
-        return getProperty(process.env, p1, 'Unknown');
-      } );
-      uri = uri.replace(/\$\{workspaceFolder:(.+?)\}/, (m, p1) => {
-        let wsf = getNamedWorkspaceFolder(p1);
-        if (!wsf) { return 'Unknown'; }
-        return wsf.uri.fsPath;
-      });
-      let workspace = undefined;
-      let editorWorkspace = undefined;
-      let file = undefined;
-      let fileDirname = undefined;
-      let workspaceFolder = undefined;
-
-      if (editor) {
-        editorWorkspace = vscode.workspace.getWorkspaceFolder(editor.document.uri);
-        file = editor.document.fileName;
-        fileDirname = path.dirname(file);
-        let fileBasename = path.basename(file);
-        let fileExtname = path.extname(file);
-        let fileBasenameNoExtension = fileBasename.substring(0, fileBasename.length-fileExtname.length);
-        uri = transformVariable(uri, fileDirname, 'fileDirname');
-        uri = transformVariable(uri, fileBasename, 'fileBasename');
-        uri = transformVariable(uri, fileBasenameNoExtension, 'fileBasenameNoExtension');
-        uri = transformVariable(uri, fileExtname, 'fileExtname');
-      }
-      if (uri.indexOf('${') >= 0) {  // workspace related variables
-        const wsfolders = dblQuest(vscode.workspace.workspaceFolders, []);
-        if (wsfolders.length === 0) {
-          vscode.window.showErrorMessage('No Workspace');
-          return;
-        }
-        if (wsfolders.length === 1) {
-          workspace = wsfolders[0];
-        } else {
-          workspace = editorWorkspace;
-          if (!workspace) {
-            vscode.window.showErrorMessage('Use named Workspace');
-            return;
-          }
-        }
-        if (workspace) {
-          workspaceFolder = workspace.uri.fsPath;
-          let workspaceFolderBasename = path.basename(workspaceFolder);
-          uri = transformVariable(uri, workspaceFolder, 'workspaceFolder');
-          uri = transformVariable(uri, workspaceFolderBasename, 'workspaceFolderBasename');
-        }
-        if (editorWorkspace) {
-          let relativeFile = file.substring(workspaceFolder.length+1);
-          let relativeFileDirname = fileDirname.substring(workspaceFolder.length+1);
-          uri = transformVariable(uri, workspaceFolder, 'fileWorkspaceFolder');
-          uri = transformVariable(uri, relativeFile, 'relativeFile');
-          uri = transformVariable(uri, relativeFileDirname, 'relativeFileDirname');
-        }
-      }
+      uri = await variableSubstitutionAsync(uri, args, document, enableLogging);
+      uri = variableSubstitution(uri, args, document, enableLogging);
     }
     if (isString(uri)) {
       uri = vscode.Uri.file(uri);

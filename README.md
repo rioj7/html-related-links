@@ -48,14 +48,17 @@ The `all` list of regex strings is mainly used to emulate the behaviour when thi
 
 The elements of the array are objects with properties (or strings, see next paragraph):
 * `find` : a regex string with capture groups. property is required
-* `filePath` : a string that constructs the file path using the captured groups from `find`.
+* `filePath` : a string that constructs the file path using the captured groups from `find` and [variables](variables) (not <code>&dollar;{command}</code>).
     * it is a string as you would use in a regex replace operation, use `$1`, `$2`, ... to reference captured groups.
+    * variables can be use to create a [Table of Content](#example-4-table-of-content)
     * the default value is: `"$1"`
     * if the file path is relative to the [file root](#html-related-links.fileroot) directory you must start the `filePath` string with `/`.<br/>Example: if the `find` captures a path, relative to the file root, for a Javascript file without extension use: `"/$1.js"`
 * `isAbsolutePath` : is the result of `filePath` an absolute path. default: `false`
-* `lineNr` : a string that constructs the line number to jump to using the captured groups from `find`.<br/>Example: `"find": "([\\w.]+)@(\\d+)", "lineNr": "$2"`
-* `charPos` : a string that constructs the character position to jump to using the captured groups from `find`. Only used when `lineNr` is defined.
-* `rangeGroup` : The capture group that is the range for the <kbd>Ctrl</kbd>+Click (Follow link). Use <code>&dollar;<em>n</em></code> notation. Default: if no `lineNr` specified uses capture group from `filePath`.
+* `lineNr` : a string that constructs the line number to jump to using the captured groups from `find` and/or a JavaScript Expression using the [`position` variable](#position-variable).<br/>Example: `"find": "([\\w.]+)@(\\d+)", "lineNr": "$2"`
+* `charPos` : a string that constructs the character position to jump to using the captured groups from `find` and/or a JavaScript Expression using the [`position` variable](#position-variable). Only used when `lineNr` is defined.
+* `rangeGroup` : the capture group that is the range for the <kbd>Ctrl</kbd>+Click (Follow link). Use <code>&dollar;<em>n</em></code> notation. Default: if no `lineNr` specified uses capture group from `filePath`.
+* `label` : a string that constructs the label using the captured groups from `find`. Used in [Table of Content](#example-4-table-of-content) views. default: value of `filePath`
+* `allowCurrentFile` : is a link to the current file allowed. Used in [Table of Content](#example-4-table-of-content) views. default: `false`
 
 If you use the default value for `filePath` you can replace the object by the `find` property string. The following 3 elements are equivalent:
 ```
@@ -71,6 +74,19 @@ If you have the possibility of links with:
 * file
 
 Then you should specify the regex that matches the most text first. See Example 3.
+
+### position variable
+
+At each matching location of a link a variable `position` is filled with the `line` and `character` values for the `start` and `end` of the match. The variable `position` can be used in the JavaScript Expressions (addition/subtraction/...) of the `lineNr` and `charPos` properties.
+
+The following `position` members have a numeric value and can be used in the `lineNr` and `charPos` properties:
+
+* `position.start.line`
+* `position.start.character`
+* `position.end.line`
+* `position.end.character`
+
+An example of its use is Example 4 [Table of Content](#example-4-table-of-content)
 
 ### Example 1
 
@@ -141,6 +157,51 @@ Use the following setting:
       {
         "find": "--gotoline ([-\\w./]+)",
         "filePath": "$1"
+      }
+    ]
+  }
+```
+
+### Example 4 Table of Content
+
+If the **`OUTLINE`** view does not show your sections you can use special formatted comments to create a Table of Content in the **`RELATED LINKS`** view.
+
+Given the Python file:
+
+```python
+"""Awesome Python book Code"""
+
+# toc Chapter 1
+def foo1():
+  pass
+
+# toc Chapter 2
+def bar2():
+  pass
+# toc -- Chapter 2.1
+def bar2Input():
+  pass
+# toc -- Chapter 2.2
+def bar2Draw():
+  pass
+
+# toc Chapter 3
+def foobar3():
+  pass
+```
+
+Use the following setting:
+
+```json
+  "html-related-links.include": {
+    "python": [
+      {
+        "find": "#\\s*toc\\s*(.+)",
+        "filePath": "${fileBasename}",
+        "lineNr": "position.start.line+1",
+        "charPos": "1",
+        "label": "$1",
+        "allowCurrentFile": true
       }
     ]
   }
@@ -273,7 +334,9 @@ There are 2 possibilities for the `args` property of the command:
 * an array with maximum 3 elements
 * an object with properties
 
-The file system path can be a full path or constructed from variables and static text. The variables used are constructed from the file path of the current active editor. See the [VSC page on variables](https://code.visualstudio.com/docs/editor/variables-reference) for an explanation.
+## Variables
+
+The file system path can be a full path or constructed from variables and static text. The variables used are constructed from the file path of the current active editor or an open workspace. See the [VSC page on variables](https://code.visualstudio.com/docs/editor/variables-reference) for an explanation.
 
 The variables allowed are:
 

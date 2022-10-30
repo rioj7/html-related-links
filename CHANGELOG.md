@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.0.0] 2022-10-30
+### Added
+- possibility to create a Table of Content using special formatted comments.
+
 ## [0.18.1] 2022-05-17
 ### Fixed
 - Error message when `Ctrl+click` a link with `lineNr`

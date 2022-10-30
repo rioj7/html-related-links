@@ -4,7 +4,7 @@
   "description": "View of related and linked files",
   "publisher": "rioj7",
   "license": "MIT",
-  "version": "0.18.1",
+  "version": "1.0.0",
   "engines": {"vscode": "^1.50.0"},
   "categories": ["Other"],
   "keywords": ["html","related","links","multi-root ready"],
@@ -109,11 +109,11 @@
                   },
                   "lineNr": {
                     "type": "string",
-                    "description": "To which line number do you want to jump. No default"
+                    "description": "To which line number do you want to jump, use any capture group from 'find' regex and an expression using current position in file. No default"
                   },
                   "charPos": {
                     "type": "string",
-                    "description": "To which character position do you want to jump. Only used when `lineNr` is defined. No default"
+                    "description": "To which character position do you want to jump, use any capture group from 'find' regex and an expression using current position in file. Only used when `lineNr` is defined. No default"
                   },
                   "rangeGroup": {
                     "type": "string",
@@ -122,6 +122,14 @@
                   "isAbsolutePath": {
                     "type": "boolean",
                     "description": "Is the result of 'filePath' an absolute path. default: false"
+                  },
+                  "label": {
+                    "type": "string",
+                    "description": "The label used in the view, use any capture group from 'find' regex. default: file path"
+                  },
+                  "allowCurrentFile": {
+                    "type": "boolean",
+                    "description": "Is a link to the current file allowed. Used in Table of Content views. default: false"
                   }
                 },
                 "required": ["find"],
