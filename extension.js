@@ -50,7 +50,7 @@ class HTMLRelatedLinksProvider {
   }
   getChildren(element) {
     if (!this.paths.documentPath) return Promise.resolve([]);
-    // when tabs are chanegd we get multiple 'ChangeTextEditorSelection' events.
+    // when tabs are changed we get multiple 'ChangeTextEditorSelection' events.
     // check for current editor
     if (this.isLocked() && !this.isLockedDocument()) {
       return Promise.resolve( this.content || [] );
@@ -97,6 +97,7 @@ class RelatedLink extends vscode.TreeItem {
     this.label = linkObj.label; // use label when set
     this.contextValue = 'relatedFile'; // used for menu entries
   }
+  // @ts-ignore
   get tooltip() {
     return `${this.resourceUri.fsPath}`;
   }
