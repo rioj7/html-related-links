@@ -226,7 +226,7 @@ class RelatedPaths {
     let includeLanguageArr = this.include[languageId];
     for (const listItem of list) {
       if (isString(listItem)) {
-        includeLanguageArr.push( {find: listItem, filePath: '$1', lineNr: undefined, charPos: undefined});
+        includeLanguageArr.push( {find: listItem, filePath: '$1', lineNr: undefined, charPos: undefined, docLink: asDoclink});
         continue;
       }
       let find = getProperty(listItem, 'find');
@@ -237,6 +237,7 @@ class RelatedPaths {
       let label = getProperty(listItem, 'label');
       let allowCurrentFile = getProperty(listItem, 'allowCurrentFile');
       let rangeGroup = getProperty(listItem, 'rangeGroup');
+      asDoclink = getProperty(listItem, 'documentLink', asDoclink);
       if (!rangeGroup && !lineNr) {
         let groupNr = getCaptureGroupNr(filePath);
         if (groupNr !== undefined) {

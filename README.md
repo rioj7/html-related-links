@@ -53,12 +53,16 @@ The elements of the array are objects with properties (or strings, see next para
     * variables can be use to create a [Table of Content](#example-4-table-of-content)
     * the default value is: `"$1"`
     * if the file path is relative to the [file root](#html-related-links.fileroot) directory you must start the `filePath` string with `/`.<br/>Example: if the `find` captures a path, relative to the file root, for a Javascript file without extension use: `"/$1.js"`
+    * if you use [variables](variables) that have transforms (find/replace) and you want to use capture groups in the replace use `$$1`, `$$2`, ....  
+      if you use `$1` it will be replaced with capture group 1 of the `find` property of the include object.  
+      See example [Create link based on file path](#example-5-create-link-based-on-file-path)
 * `isAbsolutePath` : is the result of `filePath` an absolute path. default: `false`
 * `lineNr` : a string that constructs the line number to jump to using the captured groups from `find` and/or a JavaScript Expression using the [`position` variable](#position-variable).<br/>Example: `"find": "([\\w.]+)@(\\d+)", "lineNr": "$2"`
 * `charPos` : a string that constructs the character position to jump to using the captured groups from `find` and/or a JavaScript Expression using the [`position` variable](#position-variable). Only used when `lineNr` is defined.
 * `rangeGroup` : the capture group that is the range for the <kbd>Ctrl</kbd>+Click (Follow link). Use <code>&dollar;<em>n</em></code> notation. Default: if no `lineNr` specified uses capture group from `filePath`.
 * `label` : a string that constructs the label using the captured groups from `find`. Used in [Table of Content](#example-4-table-of-content) views. default: value of `filePath`
 * `allowCurrentFile` : is a link to the current file allowed. Used in [Table of Content](#example-4-table-of-content) views. default: `false`
+* `documentLink` : Create a document link (Ctrl+Click) for this find. default: `true`
 
 If you use the default value for `filePath` you can replace the object by the `find` property string. The following 3 elements are equivalent:
 ```
@@ -206,6 +210,39 @@ Use the following setting:
     ]
   }
 ```
+
+### Example 5 Create link based on file path
+
+In some cases you have a related file that has no text representation in the current file.
+
+An example is a Ruby spec file.
+
+You can add a link in the RELATED LINKS view by adding this to your settings:
+
+```json
+  "html-related-links.include": {
+    "ruby": [
+      {
+        "find": "^(.)",
+        "filePath": "${workspaceFolder}/${relativeFileDirname:find=([\\\\/])app(\\1|$):replace=$$1spec$$2:}/${fileBasenameNoExtension}_spec.rb",
+        "isAbsolutePath": true,
+        "documentLink": false
+      }
+  },
+  "html-related-links.exclude": [
+    "_spec_spec.rb"
+  ]
+```
+
+Because of JSON all `\` need to be escaped with a `\`.
+
+* `"find": "^(.)"` : the `find` regular expression **has** to find something. We search for the first character in the file.
+* `find=([\\\\/])app(\\1|$)` : the directory `app` can be at the end of the relative path and it can be separated with `\` or `/`,  
+  `\\1` - use the same separator as in capture group 1.
+* `replace=$$1spec$$2` : replace `app` with `spec` and use the same separator characters.  
+  `$$` because `filePath` is constructed from the `find` regex but in this transform we want to use the capture groups from the `find` named in the variable. `$$` will be replaced with `$` in the construction of `filePath`.
+* `"documentLink": false` : don't create a document link (Ctrl+Click) for the spec file
+* `"_spec_spec.rb"` reject the spec file of a spec file
 
 ## `html-related-links.exclude`
 
@@ -384,6 +421,9 @@ Each transform is defined with the following properties:
 <code>find=<em>regex</em>:flags=<em>string</em>:replace=<em>string</em></code>
 
 The text is [searched and replaced with a regular expression](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace). All occurrences of `find` are replaced if `flags` has `g`. The capture groups in the `find` regex can be used in the `replace` string with <code>&dollar;<em>n</em></code> (like `$1`). `flags` are the regex flags used in the search. If `find`, `flags` or `replace` property are not defined they default to `(.*)`, _emptyString_ and `$1` respectively.
+
+If you use the Variable Transform in the setting [`html-related-links.include`](#html-related-links.include) and you want to use capture groups in the `replace` property you have to use `$$1`, `$$2`, ...  
+If you use `$1` and `$2` they will use the capture groups of the `find` property of the `include` object.
 
 You can define as many `[0...)` find-replace transforms as you like.
 

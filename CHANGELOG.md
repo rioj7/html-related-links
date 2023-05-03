@@ -1,5 +1,12 @@
 # Change Log
 
+## [1.1.0] 2023-05-03
+### Added
+- `documentLink` property
+- generate related link based on file path
+### Fixed
+- allow multiple variables: ${env} and ${workspaceFolder:name}
+
 ## [1.0.0] 2022-10-30
 ### Added
 - possibility to create a Table of Content using special formatted comments.

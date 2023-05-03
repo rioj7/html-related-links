@@ -4,7 +4,7 @@
   "description": "View of related and linked files",
   "publisher": "rioj7",
   "license": "MIT",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "engines": {"vscode": "^1.50.0"},
   "categories": ["Other"],
   "keywords": ["html","related","links","multi-root ready","table","content"],
@@ -126,6 +126,10 @@
                   "label": {
                     "type": "string",
                     "description": "The label used in the view, use any capture group from 'find' regex. default: file path"
+                  },
+                  "documentLink": {
+                    "type": "boolean",
+                    "description": "Create a document link for this find. default: true"
                   },
                   "allowCurrentFile": {
                     "type": "boolean",
