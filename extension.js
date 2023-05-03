@@ -398,13 +398,13 @@ var variableSubstitutionAsync = async (text, args, document, enableLogging) => {
 };
 /** @param {string} text @param {object} args @param {vscode.TextDocument} document @param {boolean} enableLogging */
 var variableSubstitution = (text, args, document, enableLogging) => {
-  text = text.replace(/\$\{env:([^}]+)\}/, (m, p1) => {
+  text = text.replace(/\$\{env:([^}]+)\}/g, (m, p1) => {
     if (enableLogging) {
       console.log('Use environment variable:', p1);
     }
     return getProperty(process.env, p1, 'Unknown');
   } );
-  text = text.replace(/\$\{workspaceFolder:(.+?)\}/, (m, p1) => {
+  text = text.replace(/\$\{workspaceFolder:(.+?)\}/g, (m, p1) => {
     let wsf = getNamedWorkspaceFolder(p1);
     if (!wsf) { return 'Unknown'; }
     return wsf.uri.fsPath;
