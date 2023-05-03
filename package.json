@@ -7,7 +7,7 @@
   "version": "1.0.0",
   "engines": {"vscode": "^1.50.0"},
   "categories": ["Other"],
-  "keywords": ["html","related","links","multi-root ready"],
+  "keywords": ["html","related","links","multi-root ready","table","content"],
   "icon": "images/icon.png",
   "galleryBanner": {"color": "#000080", "theme": "dark"},
   "activationEvents": [ "*" ],
@@ -109,11 +109,11 @@
                   },
                   "lineNr": {
                     "type": "string",
-                    "description": "To which line number do you want to jump, use any capture group from 'find' regex and an expression using current position in file. No default"
+                    "description": "To which line number do you want to jump, use any capture group from 'find' regex and/or an expression using current position in the file. No default"
                   },
                   "charPos": {
                     "type": "string",
-                    "description": "To which character position do you want to jump, use any capture group from 'find' regex and an expression using current position in file. Only used when `lineNr` is defined. No default"
+                    "description": "To which character position do you want to jump, use any capture group from 'find' regex and/or an expression using current position in the file. Only used when `lineNr` is defined. No default"
                   },
                   "rangeGroup": {
                     "type": "string",
