@@ -105,6 +105,19 @@ You want to find files referenced in PHP `require` statements. Add the following
   }
 ```
 
+If you also want the `include` variants use:
+
+```json
+  "html-related-links.include": {
+    "php": [
+      "(?:require|include)(?:_once)?\\('([^']+)'\\)",
+      "(?:require|include)(?:_once)? '([^']+)'",
+      "(?:require|include)(?:_once)?\\(\"([^\"]+)\"\\)",
+      "(?:require|include)(?:_once)? \"([^\"]+)\""
+    ]
+  }
+```
+
 At the moment it is not possible to limit the search to particular parts of the file. So if you write pages about PHP and use the `require` in your examples these files will also be matched. For HTML links in examples this does not apply because the `<` is written as `&lt;`, so it will not be matched as a HTML tag. It can lead to a match in Javascript files that construct HTML text.
 
 ### Example 2
