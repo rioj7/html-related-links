@@ -1,5 +1,12 @@
 # Change Log
 
+## [1.2.0] 2024-03-14
+### Added
+- `lineSearch` property: search for line containing the literal text (constructed from `find` capture groups).
+
+## [1.1.0] 2023-05-03
+### Added
+- `documentLink` property
 ## [1.1.0] 2023-05-03
 ### Added
 - `documentLink` property

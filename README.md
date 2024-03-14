@@ -48,7 +48,7 @@ The `all` list of regex strings is mainly used to emulate the behaviour when thi
 
 The elements of the array are objects with properties (or strings, see next paragraph):
 * `find` : a regex string with capture groups. property is required
-* `filePath` : a string that constructs the file path using the captured groups from `find` and [variables](variables) (not <code>&dollar;{command}</code>).
+* `filePath` : a string that constructs the file path using the captured groups from `find` and [variables](#variables) (not <code>&dollar;{command}</code>).
     * it is a string as you would use in a regex replace operation, use `$1`, `$2`, ... to reference captured groups.
     * variables can be use to create a [Table of Content](#example-4-table-of-content)
     * the default value is: `"$1"`
@@ -59,6 +59,8 @@ The elements of the array are objects with properties (or strings, see next para
 * `isAbsolutePath` : is the result of `filePath` an absolute path. default: `false`
 * `lineNr` : a string that constructs the line number to jump to using the captured groups from `find` and/or a JavaScript Expression using the [`position` variable](#position-variable).<br/>Example: `"find": "([\\w.]+)@(\\d+)", "lineNr": "$2"`
 * `charPos` : a string that constructs the character position to jump to using the captured groups from `find` and/or a JavaScript Expression using the [`position` variable](#position-variable). Only used when `lineNr` is defined.
+* `lineSearch` : (Optional) a string that constructs the literal text to search in the linked file (`filePath`) using the capture groups from `find`.  
+  If defined `lineNr` and `charPos` are ignored.
 * `rangeGroup` : the capture group that is the range for the <kbd>Ctrl</kbd>+Click (Follow link). Use <code>&dollar;<em>n</em></code> notation. Default: if no `lineNr` specified uses capture group from `filePath`.
 * `label` : a string that constructs the label using the captured groups from `find`. Used in [Table of Content](#example-4-table-of-content) views. default: value of `filePath`
 * `allowCurrentFile` : is a link to the current file allowed. Used in [Table of Content](#example-4-table-of-content) views. default: `false`
@@ -257,6 +259,75 @@ Because of JSON all `\` need to be escaped with a `\`.
 * `"documentLink": false` : don't create a document link (Ctrl+Click) for the spec file
 * `"_spec_spec.rb"` reject the spec file of a spec file
 
+### Example 6 Use special comments to link file positions
+
+If you have the following file structure:
+
+```none
+<workspaceroot>/somePath
+                ├── backend
+                │   ├── adminroute.js
+                │   └── userroute.js
+                └── httptest
+                    ├── admin.http
+                    └── user.http
+```
+
+Example content `backend/adminroute.js`:
+
+```js
+// HTTP POST {{url}}/_/admin/api/auth/logout
+routerAdd("GET", "_/admin/api/auth/logout", async (c) => {
+  // ....
+})
+
+// HTTP POST {{url}}/_/admin/api/auth/login
+routerAdd("POST", "_/admin/api/auth/login", async (c) => {
+  // ....
+})
+```
+
+Example content `httptest/admin.http`:
+
+```none
+### // HTTP GET {{url}}/_/admin/api/auth/logout
+*sendrequest*
+GET {{url}}/_/admin/api/auth/logout
+
+
+### // HTTP POST {{url}}/_/admin/api/auth/login
+*sendrequest*
+POST {{url}}/_/admin/api/auth/login
+Content-Type: application/json
+
+{
+  .....
+}
+```
+
+Similar content for: `backend/userroute.js`, `httptest/user.http`
+
+Using the following setting (`.http` files are designated as `plaintext`, change if needed) you can Ctrl+Click on the comments to jump between the code and the test:
+
+```json
+  "html-related-links.include": {
+    "javascript": [
+      { "find": "(// HTTP (?:GET|POST) \\{\\{url\\}\\}([\\w/]+))",
+        "filePath": "../httptest/${fileBasenameNoExtension#find=route$#replace=#}.http",
+        "label": "$1",
+        "lineSearch": "$1"
+      }
+    ],
+    "plaintext": [
+      { "find": "(// HTTP (?:GET|POST) \\{\\{url\\}\\}([\\w/]+))",
+        "filePath": "../backend/${fileBasenameNoExtension}route.js",
+        "label": "$1",
+        "lineSearch": "$1"
+      }
+    ]
+  }
+```
+
 ## `html-related-links.exclude`
 
 Is an array of strings that are regular expressions that are used to **match in the full file path**. The relative files found with the `include` regular expressions are converted to full file paths that are used to open the file. If any of the regular expressions in the `exclude` option has a match on the full file path that file will be excluded from the view.
@@ -381,7 +452,7 @@ It is not possible to use the **File** | **Open File ...** command (`workbench.a
 HTML Related Links has a command (`htmlRelatedLinks.openFile`) to open a file when you click on a row. This command is also exported to be used in a key binding or in a [multi-command](https://marketplace.visualstudio.com/items?itemName=ryuta46.multi-command).
 
 There are 2 possibilities for the `args` property of the command:
-* an array with maximum 3 elements
+* an array with maximum 4 elements
 * an object with properties
 
 ## Variables
@@ -555,11 +626,12 @@ With `extension.commandvariable.pickStringRemember` you can add a pick list to d
 
 ## `args` is an array
 
-The `args` part can be an array with 1 to 3 elements:
+The `args` part can be an array with 1 to 4 elements:
 
 1. The file system path to the file (full path)
 1. The line number you want to place the cursor (default: previous visited line)
 1. The character position on the line you want to place the cursor, only used if line number present (default: 1 or previous character position)
+1. The literal text to search to find a line number and character position (default: undefined)
 
 ```json
   {
@@ -576,6 +648,7 @@ The `args` object has the following properties:
 * `file` : The file system path to the file (full path)
 * `lineNr` : The line number you want to place the cursor (default: previous visited line)
 * `charPos` : The character position on the line you want to place the cursor, only used if line number present (default: 1 or previous character position)
+* `lineSearch` : The literal text to search to find a line number and character position (default: undefined)
 * `method` : with which method to open the file (default: `openShow`):
     * `openShow` : use `vscode.workspace.openTextDocument` and `vscode.workspace.showTextDocument`
     * `vscode.open` : use `vscode.open` command, if the file does not exists you can create it from the error message.
@@ -598,3 +671,7 @@ You will get an error message: `Files above 50MB cannot be synchronized with ext
 This is when using an array as argument or when `method` is `openShow`. I don't know if we have this problem when `method` is `vscode.open`.
 
 The **Open File or Create File** icon (on the item context menu) uses the `vscode.open` method.
+
+----
+
+If you use the property `lineSearch` and use Document Links (Ctrl+Click) and the linked file is not opened yet, the file is opened at the default (previous) position and you get an Information Message to keep the tab and try the link again. VSC needs to know the document so the extension can determine the line and character number to jump to. It can be done by listening to File Open Events and ....., but this is cleaner in the code. Document Links are not followed with an async/Thennable method.

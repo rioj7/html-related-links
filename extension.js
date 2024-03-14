@@ -67,9 +67,9 @@ class HTMLRelatedLinksProvider {
     }
     let removePathFromLabel = this.paths.removePathFromLabel;
     var links = new Map();
-    for (let {linkPath, lineNr, charPos, filePos, filePath, label, isCurrentFile} of this.paths.paths) {
+    for (let {linkPath, lineNr, charPos, lineSearch, filePos, filePath, label, isCurrentFile} of this.paths.paths) {
       let compareStr = linkPath;
-      if (label === undefined && lineNr !== undefined) {
+      if (label === undefined && (lineNr !== undefined || lineSearch !== undefined)) {
         label = `${filePath}`;
         compareStr = label;
         let addNumber = x => {
@@ -78,6 +78,7 @@ class HTMLRelatedLinksProvider {
           compareStr += `:${String(x).padStart(7, '0')}`;
           return x;
         };
+        addNumber(lineSearch);
         addNumber(lineNr);
         addNumber(charPos);
       }
@@ -86,7 +87,7 @@ class HTMLRelatedLinksProvider {
         if (label && removePathFromLabel) {
           label = label.replace(this.removePathRE, '$1');
         }
-        links.set(key, {linkPath, lineNr, charPos, label, compareStr, filePos, isCurrentFile});
+        links.set(key, {linkPath, lineNr, charPos, lineSearch, label, compareStr, filePos, isCurrentFile});
       }
     }
     var linksAr = Array.from(links.values());
@@ -100,7 +101,7 @@ class HTMLRelatedLinksProvider {
 class RelatedLink extends vscode.TreeItem {
   constructor(linkObj) {
     super(vscode.Uri.file(linkObj.linkPath));
-    this.command = { command: "htmlRelatedLinks.openFile", arguments: [this.resourceUri, linkObj.lineNr, linkObj.charPos], title: '' };
+    this.command = { command: "htmlRelatedLinks.openFile", arguments: [this.resourceUri, linkObj.lineNr, linkObj.charPos, undefined, undefined, linkObj.lineSearch], title: '' };
     this.iconPath = vscode.ThemeIcon.File;
     this.description = !linkObj.isCurrentFile; // use resource URI if other file
     this.label = linkObj.label; // use label when set
@@ -209,9 +210,13 @@ class RelatedPaths {
           };
           let lineNr  = getNumber(includeObj.lineNr);
           let charPos = getNumber(includeObj.charPos);
+          let lineSearch = includeObj.lineSearch;
+          if (lineSearch) {
+            lineSearch = result[0].replace(replaceRE, lineSearch);
+          }
           let label  = includeObj.label;
           if (label) { label = result[0].replace(replaceRE, label); }
-          this.paths.push( {linkPath, lineNr, charPos, filePos, filePath, pathRange, fullRange, docLink: includeObj.docLink, label, isCurrentFile} );
+          this.paths.push( {linkPath, lineNr, charPos, lineSearch, filePos, filePath, pathRange, fullRange, docLink: includeObj.docLink, label, isCurrentFile} );
         }
       }
     }
@@ -232,6 +237,7 @@ class RelatedPaths {
       let find = getProperty(listItem, 'find');
       let filePath = getProperty(listItem, 'filePath', '$1');
       let isAbsolutePath = getProperty(listItem, 'isAbsolutePath');
+      let lineSearch = getProperty(listItem, 'lineSearch');
       let lineNr = getProperty(listItem, 'lineNr');
       let charPos = getProperty(listItem, 'charPos');
       let label = getProperty(listItem, 'label');
@@ -245,22 +251,37 @@ class RelatedPaths {
         }
       }
       if (isString(find)) {
-        includeLanguageArr.push( {find, filePath, lineNr, charPos, isAbsolutePath, docLink: asDoclink, rangeGroup, label, allowCurrentFile} );
+        includeLanguageArr.push( {find, filePath, lineSearch, lineNr, charPos, isAbsolutePath, docLink: asDoclink, rangeGroup, label, allowCurrentFile} );
       }
     }
   }
+}
+function searchText(document, text) {
+  let lineNr = 1;
+  let charPos = 1;
+  let offset = document.getText().indexOf(text);
+  if (offset >= 0) {
+    let position = document.positionAt(offset);
+    lineNr = position.line + 1;
+    charPos = position.character + 1;
+  }
+  return [lineNr, charPos];
 }
 class MyDocumentLink extends vscode.DocumentLink {
   constructor(linkObj) {
     super(linkObj.pathRange);
     this.linkPath = linkObj.linkPath;
+    this.lineSearch = linkObj.lineSearch;
     this.lineNr = linkObj.lineNr;
     this.charPos = linkObj.charPos;
   }
 }
-
-function revealPosition(editor, lineNr, charPos) {
-  if (!lineNr) return;
+/** @param {vscode.TextEditor} editor  @param {Number} lineNr  @param {Number} charPos @param {string} lineSearch */
+function revealPosition(editor, lineNr, charPos, lineSearch) {
+  if (!lineNr && !lineSearch) return;
+  if (lineSearch) {
+    [lineNr, charPos] = searchText(document, lineSearch);
+  }
   charPos = charPos || 1;
   let position = new vscode.Position(lineNr-1, charPos-1);
   editor.selections = [new vscode.Selection(position, position)];
@@ -459,13 +480,23 @@ var variableSubstitution = (text, args, document, enableLogging) => {
   }
   return text;
 };
+/** @param {vscode.Uri} fileURI */
+function findTextDocument(fileURI) {
+  for (const document of vscode.workspace.textDocuments) {
+    if (document.isClosed) { continue; }
+    if (document.uri.scheme != 'file') { continue; }
+    if (document.uri.fsPath === fileURI.fsPath) { return document; }
+  }
+  return undefined;
+}
 function activate(context) {
-  const openFile = async (uri, lineNr, charPos, method, viewColumn) => {
+  const openFile = async (uri, lineNr, charPos, method, viewColumn, lineSearch) => {
     let enableLogging = vscode.workspace.getConfiguration('html-related-links').get('enableLogging');
     let args = uri;
     let scheme = undefined;
     if (isObject(args) && !isUri(args)) {
       uri = getProperty(args, 'file', 'Unknown');
+      lineSearch = getProperty(args, 'lineSearch');
       lineNr = getProperty(args, 'lineNr');
       charPos = getProperty(args, 'charPos');
       method = getProperty(args, 'method');
@@ -473,6 +504,7 @@ function activate(context) {
       scheme = getProperty(args, 'useScheme');
     }
     if (isArray(args)) {
+      if (args.length >= 4) { lineSearch = args[3]; }
       if (args.length >= 3) { charPos = args[2]; }
       if (args.length >= 2) { lineNr = args[1]; }
       uri = args[0];
@@ -508,7 +540,7 @@ function activate(context) {
       .then( () => {
           let editor = vscode.window.activeTextEditor;
           if (!editor) { return; }
-          revealPosition(editor, lineNr, charPos);
+          revealPosition(editor, lineNr, charPos, lineSearch);
         },
         error => { vscode.window.showErrorMessage(String(error)); }
       );
@@ -519,7 +551,7 @@ function activate(context) {
         if (enableLogging) { console.log('Document opened:', uri.fsPath); }
         vscode.window.showTextDocument(document, vscode.ViewColumn.Active, false).then( editor => {
           if (enableLogging) { console.log('Editor opened:', uri.fsPath); }
-          revealPosition(editor, lineNr, charPos);
+          revealPosition(editor, lineNr, charPos, lineSearch);
         });
       },
       error => { vscode.window.showErrorMessage(String(error)); }
@@ -531,7 +563,7 @@ function activate(context) {
   };
   const htmlRelatedLinksProvider = new HTMLRelatedLinksProvider();
   vscode.window.registerTreeDataProvider('htmlRelatedLinks', htmlRelatedLinksProvider);
-  context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.openFile', (uri, lineNr, charPos, method) => openFile(uri, lineNr, charPos, method) ) );
+  context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.openFile', (uri, lineNr, charPos, method, viewColumn, lineSearch) => openFile(uri, lineNr, charPos, method, viewColumn, lineSearch) ) );
   context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.openURL', uriText => { vscode.env.openExternal(vscode.Uri.parse(uriText, true)); }) );
   context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.openURLGitAlias', () => { vscode.env.openExternal(vscode.Uri.parse('https://raw.githubusercontent.com/GitAlias/gitalias/master/gitalias.txt', true)); }) );
   context.subscriptions.push(vscode.commands.registerCommand('htmlRelatedLinks.createFile', relatedLink => openFile(...relatedLink.command.arguments, 'vscode.open') ) );
@@ -557,6 +589,14 @@ function activate(context) {
     /** @param {MyDocumentLink} link */
     resolveDocumentLink: async (link, token) => {
       let uri = vscode.Uri.file(link.linkPath);
+      if (link.lineSearch) {
+        let document = findTextDocument(uri);
+        if (document) {
+          [link.lineNr, link.charPos] = searchText(document, link.lineSearch);
+        } else {
+          vscode.window.showInformationMessage(`Please keep tab open and try again: ${uri.fsPath}`);
+        }
+      }
       if (link.lineNr) {
         // https://github.com/microsoft/vscode/issues/149523
         let fragment = `L${link.lineNr}`
