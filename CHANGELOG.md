@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.2.1] 2024-12-15
+### Fixed
+- `htmlRelatedLinks.createFile` : uses `vscode.open` again
+
 ## [1.2.0] 2024-03-14
 ### Added
 - `lineSearch` property: search for line containing the literal text (constructed from `find` capture groups).
