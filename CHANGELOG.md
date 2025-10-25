@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.2.2] 2025-10-25
+### Fixed
+- touching ranges result in empty range intersection: no overlap
+
 ## [1.2.1] 2024-12-15
 ### Fixed
 - `htmlRelatedLinks.createFile` : uses `vscode.open` again

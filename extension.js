@@ -191,7 +191,7 @@ class RelatedPaths {
           };
           let position = {start: offset2DisplayPosition(filePos), end: offset2DisplayPosition(filePosEnd)};
           let fullRange = new vscode.Range(document.positionAt(filePos), document.positionAt(filePosEnd));
-          if (this.paths.some( p => fullRange.intersection(p.fullRange) !== undefined )) { continue; }  // regex matching biggest text ranges should be specified first
+          if (this.paths.some( p => { let r = fullRange.intersection(p.fullRange); return !(r === undefined || r.isEmpty)} )) { continue; }  // regex matching biggest text ranges should be specified first
           let adjustRange = txt => {
             filePos += result[0].indexOf(txt);
             filePosEnd = filePos + txt.length;
